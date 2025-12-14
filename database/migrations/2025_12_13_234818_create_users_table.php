@@ -19,12 +19,12 @@ return new class extends Migration
             $table->string('last_name', 50);
             $table->string('phone', 13)->unique();
             $table->string('password', 255);
-            $table->enum('role', ["tenant","owner","admin"]);
+            $table->enum('role', ["tenant", "owner", "admin"]);
             $table->text('avatar');
             $table->text('id_card');
             $table->date('birth_date');
-            $table->enum('status', ["accepted","rejected","pending"]);
-            $table->timestamps(); 
+            $table->enum('status', ["approved", "rejected", "pending"]);
+            $table->timestamps();
         });
 
         Schema::enableForeignKeyConstraints();

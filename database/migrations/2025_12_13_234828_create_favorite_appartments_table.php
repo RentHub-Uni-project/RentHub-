@@ -16,11 +16,11 @@ return new class extends Migration
         Schema::create('favorite_appartments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id');
-            $table->unsignedBigInteger('apartment_id');
+            $table->unsignedBigInteger('appartment_id');
             $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('apartment_id')->references('id')->on('apartments')->onDelete('cascade');
+            $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
             $table->timestamps(); // created_at و updated_at
-            $table->unique(['tenant_id', 'apartment_id']);
+            $table->unique(['tenant_id', 'appartment_id']);
         });
 
         Schema::enableForeignKeyConstraints();

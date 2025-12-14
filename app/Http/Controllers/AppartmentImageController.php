@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FavoriteApartment;
+use App\Models\AppartmentImage;
 use Illuminate\Http\Request;
 
-class FavoriteApartmentController extends Controller
+class AppartmentImageController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class FavoriteApartmentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(FavoriteApartment $favoriteApartment)
+    public function show(AppartmentImage $appartmentImage)
     {
         //
     }
@@ -42,7 +42,7 @@ class FavoriteApartmentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(FavoriteApartment $favoriteApartment)
+    public function edit(AppartmentImage $appartmentImage)
     {
         //
     }
@@ -50,7 +50,7 @@ class FavoriteApartmentController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, FavoriteApartment $favoriteApartment)
+    public function update(Request $request, AppartmentImage $appartmentImage)
     {
         //
     }
@@ -58,7 +58,7 @@ class FavoriteApartmentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(FavoriteApartment $favoriteApartment)
+    public function destroy(AppartmentImage $appartmentImage)
     {
         //
     }

@@ -14,18 +14,18 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
 
         Schema::create('bookings', function (Blueprint $table) {
-            $table->id(); // Primary key
+            $table->id();
             $table->unsignedBigInteger('tenant_id');
             $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
-            $table->unsignedBigInteger('apartment_id');
-            $table->foreign('apartment_id')->references('id')->on('apartments')->onDelete('cascade');
+            $table->unsignedBigInteger('appartment_id');
+            $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('total_price', 12, 2);
             $table->integer('number_of_guests')->default(1);
             $table->text('tenant_notes')->nullable();
-            $table->enum('status', ["pending","approved","rejected","cancelled","completed"])->default("pending");
-            $table->enum('payment_status', ["pending","paid","refunded","failed"])->default("pending");
+            $table->enum('status', ["pending", "approved", "rejected", "cancelled", "completed"])->default("pending");
+            $table->enum('payment_status', ["pending", "paid", "refunded", "failed"])->default("pending");
             $table->timestamps();
         });
 
