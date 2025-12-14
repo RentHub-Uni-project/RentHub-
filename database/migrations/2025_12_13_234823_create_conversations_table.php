@@ -17,14 +17,14 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('owner_id');
             $table->foreign('owner_id')->references('id')->on('users')->onDelete('cascade');
-            $table->unsignedBigInteger('renter_id');
-            $table->foreign('renter_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('tenant_id');
+            $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('booking_id')->nullable();
             $table->foreign('booking_id')->references('id')->on('bookings')->onDelete('cascade');
             $table->timestamp('last_message_at')->nullable()->useCurrent();
             $table->date('end_date_conversations')->nullable();
             $table->timestamps();
-            $table->unique(['owner_id', 'renter_id', 'booking_id']);
+            $table->unique(['owner_id', 'tenant_id', 'booking_id']);
         });
 
         Schema::enableForeignKeyConstraints();
