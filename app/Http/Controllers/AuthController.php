@@ -60,7 +60,7 @@ class AuthController extends Controller
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Registration failed. Please try again.',
+                'message' => 'operation failed. Please try again.',
                 'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
@@ -106,21 +106,27 @@ class AuthController extends Controller
                 'token' => $token,
                 'user' => $user
             ]);
-        } catch (\Exception $exc) {
+        } catch (\Exception $e) {
             return response()->json([
-                "message" => "failed!",
-                "errors" => $exc->getMessage()
+                'message' => 'operation failed. Please try again.',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
 
     public function logout(Request $request)
     {
-        // Delete the current access token
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'message' => 'Logged out successfully'
-        ]);
+            return response()->json([
+                'message' => 'Logged out successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'operation failed. Please try again.',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
     }
 }
