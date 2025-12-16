@@ -1,0 +1,70 @@
+tables:
+    - users:
+        * login (all)
+        * register (anonymos)
+        * logout (all)
+        * update profile (all)
+        * get profile (all)
+
+        * create user (admin)
+        * update user (admin)
+        * delete user (admin)
+        * list users (admin)
+        * get user (admin)
+
+    - appartments
+        * create appartment (owner)
+        * update my appartment (owner)
+        * delete my appartment (owner)
+        * list my appartments (owner)
+
+        * list appartments (all)
+        * get appartment (all)
+
+        * create, update, delete, list, get (admin)
+
+    - appartment_images (embeded with appartments' table controllers)
+
+    - favorite_appartments
+        * add appartment to favorites (tenant)
+        * remove appartment from favorites (tenant)
+        * get appartment from favorites (tenant)
+        * list my favorite appartments (tenant)
+
+        * create, delete, list, get (admin)
+
+
+    - reviews
+        * create appartment review (tenant)
+        * update appartment review (tenant)
+        * delete appartment review (tenant)
+        * list my reviews (tenant)
+
+        * list appartment reviews (all)
+
+        * create, update, delete, list (owner)
+
+    - bookings
+        * create booking (tenant)
+        * delete booking (tenant)
+        * update booking (tenant)
+        * get booking (tenant)
+        * change booking status (owner)
+        * list my appartments' bookings (owner)
+
+        * create, update, delete, list, get (admin)
+
+    - booking_update_requests
+        * create booking update request (tenant)
+        * delete booking update request (tenant)
+        * list my booking update requests (tenant)
+        * get booking update request (tenant, owner)
+        * change booking update request status (owner)
+        * list my appartments' bookings' update requests (owner)
+
+        * create, update, list, get, delete (admin)
+
+    - payments
+    - conversaions
+    - messages
+    - notifications

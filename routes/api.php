@@ -13,10 +13,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Example protected route
     Route::get('/auth/user', function (Request $request) {
-        return $request->user();
+        return response()->json($request->user());
     });
-});
-
-Route::get('/test', function () {
-    return response()->json(['message' => 'API is working!']);
 });

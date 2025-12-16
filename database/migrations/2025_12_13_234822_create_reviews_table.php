@@ -15,8 +15,6 @@ return new class extends Migration
 
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('booking_id')->unique();
-            $table->foreign('booking_id')->references('id')->on('bookings')->onDelete('cascade');
             $table->unsignedBigInteger('appartment_id');
             $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
             $table->unsignedBigInteger('tenant_id');

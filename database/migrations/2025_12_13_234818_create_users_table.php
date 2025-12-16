@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('avatar');
             $table->text('id_card');
             $table->date('birth_date');
-            $table->enum('status', ["approved", "rejected", "pending"]);
+            $table->enum('status', ["approved", "rejected", "pending"])->default("pending");
             $table->timestamps();
         });
 

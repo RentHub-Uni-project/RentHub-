@@ -22,8 +22,8 @@ class AuthController extends Controller
                 "last_name" => "required|string|max:50",
                 "password" => "required|min:8",
                 "birth_date" => "required|date",
-                "profile_image" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
-                "id_image" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
+                "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
+                "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -37,26 +37,25 @@ class AuthController extends Controller
             $profileImagePath = null;
             $idImagePath = null;
 
-            if ($request->hasFile('profile_image')) {
-                $profileImagePath = $request->file('profile_image')
+            if ($request->hasFile('avatar')) {
+                $profileImagePath = $request->file('avatar')
                     ->store('profiles', 'public');
             }
 
-            if ($request->hasFile('id_image')) {
-                $idImagePath = $request->file('id_image')
+            if ($request->hasFile('id_card')) {
+                $idImagePath = $request->file('id_card')
                     ->store('ids', 'public');
             }
 
             $user = User::create([
                 ...$validatedData,
-                'profile_image' => $profileImagePath,
-                'id_image' => $idImagePath,
+                'avatar' => "storage/" . $profileImagePath,
+                'id_card' => "storage/" . $idImagePath,
                 'password' => Hash::make($validatedData["password"]),
             ]);
 
             return response()->json([
                 'message' => 'Registration successful. Waiting for admin approval.',
-                'user_serialized' => $user->serialize(),
                 'user' => $user
             ], 201);
         } catch (\Exception $e) {
@@ -105,12 +104,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Login successful',
                 'token' => $token,
-                'user' => [
-                    'id' => $user->id,
-                    'phone' => $user->phone,
-                    'full_name' => $user->full_name,
-                    'role' => $user->role,
-                ]
+                'user' => $user
             ]);
         } catch (\Exception $exc) {
             return response()->json([
