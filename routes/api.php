@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AppartmentController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,4 +23,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+});
+
+
+
+Route::prefix('apartments')->group(function () {
+    Route::get('/', [AppartmentController::class, 'index']);
+    Route::get('/{id}', [AppartmentController::class, 'show']);
+});
+
+Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
+    Route::get('/apartments', [AppartmentController::class, 'myApartments']);
+    Route::post('/apartments', [AppartmentController::class, 'store']);
+    Route::put('/apartments/{id}', [AppartmentController::class, 'update']);
+    Route::delete('/apartments/{id}', [AppartmentController::class, 'destroy']);
+});
+
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/apartments', [AppartmentController::class, 'adminIndex']);
+    Route::post('/apartments', [AppartmentController::class, 'adminStore']);
+    Route::put('/apartments/{id}', [AppartmentController::class, 'adminUpdate']);
+    Route::delete('/apartments/{id}', [AppartmentController::class, 'adminDelete']);
 });

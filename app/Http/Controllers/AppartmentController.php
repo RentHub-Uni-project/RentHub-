@@ -4,62 +4,83 @@ namespace App\Http\Controllers;
 
 use App\Models\Appartment;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAppartmentRequest;
+use App\Http\Requests\UpdateAppartmentRequest;
+use App\Http\Requests\AdminAppartmentRequest;
 
 class AppartmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    //  ALL USERS - Public APIs
     public function index()
     {
-        //
+        return Appartment::where('status', 'approved')->get();
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function show($id)
     {
-        //
+        return Appartment::where('status', 'approved')->findOrFail($id);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    //  OWNER - Owner APIs
+    public function myApartments(Request $request)
     {
-        //
+        $user = $request->user();
+        return Appartment::where('owner_id', $user->id)->get();
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Appartment $appartment)
+    public function store(StoreAppartmentRequest $request)
     {
-        //
+
+        $data = $request->validated();
+        $data['owner_id'] = $request->user()->id;
+        $data['status'] = 'pending';
+        return Appartment::create($data);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Appartment $appartment)
+    public function update(UpdateAppartmentRequest $request, $id)
     {
-        //
+
+        $user = $request->user();
+
+        if ($user->role === 'owner') {
+            $appartment = Appartment::where('owner_id', $user->id)->findOrFail($id);
+        } else {
+            $appartment = Appartment::findOrFail($id);
+        }
+
+        $appartment->update($request->validated());
+        return $appartment;
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Appartment $appartment)
+    public function destroy(Request $request, $id)
     {
-        //
+        $user = $request->user();
+        $appartment = Appartment::where('owner_id', $user->id)->findOrFail($id);
+        $appartment->delete();
+        return response()->json(['message' => ' deleted ']);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Appartment $appartment)
+    // ADMIN - Admin APIs
+    public function adminIndex()
     {
-        //
+        return Appartment::all();
+    }
+
+    public function adminStore(AdminAppartmentRequest $request)
+    {
+        return Appartment::create($request->validated());
+    }
+
+    public function adminUpdate(AdminAppartmentRequest $request, $id)
+    {
+        $appartment = Appartment::findOrFail($id);
+        $appartment->update($request->validated());
+        return $appartment;
+    }
+
+    public function adminDelete($id)
+    {
+        Appartment::findOrFail($id)->delete();
+        return response()->json(['message' => 'deleted by admin']);
     }
 }
