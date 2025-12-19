@@ -41,4 +41,18 @@ class User extends Authenticatable
     {
         return $this->status == "pending";
     }
+
+    public function serialize()
+    {
+        return [
+            "id" => $this->id,
+            "first_name" => $this->first_name,
+            "last_name" => $this->last_name,
+            "status" => $this->status,
+            "phone" => $this->phone,
+            "birth_date" => $this->birth_date,
+            "id_card" => $this->id_card,
+            "avatar" => $this->avatar
+        ];
+    }
 }

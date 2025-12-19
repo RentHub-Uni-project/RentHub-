@@ -1,10 +1,13 @@
-tables:
-    - users:
+plan:
+    - auth:
         * login (all)
         * register (anonymos)
         * logout (all)
+
+    - users:
         * update profile (all)
         * get profile (all)
+        * delete profile (all)
 
         * create user (admin)
         * update user (admin)
@@ -68,3 +71,15 @@ tables:
     - conversaions
     - messages
     - notifications
+
+
+commands:
+    build:
+        composer install
+        cp .env.example .env
+        php artisan key:generate
+        php artisan storage:link
+        php artisan migrate
+
+    run:
+        php artisan serve

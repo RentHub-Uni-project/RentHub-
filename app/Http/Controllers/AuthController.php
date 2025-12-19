@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -49,6 +50,7 @@ class AuthController extends Controller
 
             $user = User::create([
                 ...$validatedData,
+                "status" => UserStatus::PENDING,
                 'avatar' => "storage/" . $profileImagePath,
                 'id_card' => "storage/" . $idImagePath,
                 'password' => Hash::make($validatedData["password"]),
@@ -56,7 +58,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'Registration successful. Waiting for admin approval.',
-                'user' => $user
+                'user' => $user->serialize()
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -104,7 +106,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Login successful',
                 'token' => $token,
-                'user' => $user
+                'user' => $user->serialize()
             ]);
         } catch (\Exception $e) {
             return response()->json([

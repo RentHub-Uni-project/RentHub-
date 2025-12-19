@@ -72,7 +72,7 @@ class UserController extends Controller
 
             return response()->json([
                 "message" => "Your profile updated it successfully, waiting for admin approval",
-                "user" => $user
+                'user' => $user->serialize()
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -85,7 +85,7 @@ class UserController extends Controller
     {
         try {
 
-            return response()->json(["message" => "success", "user" => $request->user()], 200);
+            return response()->json(["message" => "success", "user" => $request->user()->serialize()], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'operation failed. Please try again.',
@@ -151,7 +151,7 @@ class UserController extends Controller
 
             return response()->json([
                 'message' => 'User created successfully.',
-                'user' => $user
+                'user' => $user->serialize()
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -212,7 +212,7 @@ class UserController extends Controller
 
             return response()->json([
                 "message" => "User updated successfully.",
-                "user" => $user
+                'user' => $user->serialize()
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -225,7 +225,7 @@ class UserController extends Controller
     public function getUser(Request $request, User $user)
     {
         try {
-            return response()->json(["message" => "User found successfully", "user" => $user], 200);
+            return response()->json(["message" => "User found successfully", 'user' => $user->serialize()], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'operation failed. Please try again.',
