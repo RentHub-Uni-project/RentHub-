@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('appartment_id');
             $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
-            $table->timestamps(); // created_at و updated_at
+            $table->timestamps(); 
             $table->unique(['tenant_id', 'appartment_id']);
         });
 

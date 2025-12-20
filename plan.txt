@@ -31,7 +31,7 @@ plan:
     - favorite_appartments
         * add appartment to favorites (tenant)
         * remove appartment from favorites (tenant)
-        * get appartment from favorites (tenant)
+        * get appartment from favorites (tenant)         x
         * list my favorite appartments (tenant)
 
         * create, delete, list, get (admin)
@@ -45,7 +45,7 @@ plan:
 
         * list appartment reviews (all)
 
-        * create, update, delete, list (owner)
+        * create, update, delete, list (admin)
 
     - bookings
         * create booking (tenant)

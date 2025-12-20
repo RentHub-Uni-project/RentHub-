@@ -30,11 +30,11 @@ class Appartment extends Model
     ];
 
     protected $casts = [
-        'is_available'      => 'boolean',
-        'price_per_night'   => 'decimal:2',
-        'price_per_month'  => 'decimal:2',
-        'latitude'          => 'decimal:8',
-        'longitude'         => 'decimal:8',
+        'is_available' => 'boolean',
+        'price_per_night' => 'decimal:2',
+        'price_per_month' => 'decimal:2',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
     ];
 
     public function owner()
@@ -56,4 +56,10 @@ class Appartment extends Model
     {
         return $this->hasMany(Review::class, 'apartment_id');
     }
+    public function favorites()
+    {
+        return $this->hasMany(FavoriteAppartment::class, 'appartment_id');
+    }
+
+
 }
