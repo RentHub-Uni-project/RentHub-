@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('favorite_appartments', function (Blueprint $table) {
+        Schema::create('favorite_apartments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id');
-            $table->unsignedBigInteger('appartment_id');
+            $table->unsignedBigInteger('apartment_id');
             $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
-            $table->timestamps(); 
-            $table->unique(['tenant_id', 'appartment_id']);
+            $table->foreign('apartment_id')->references('id')->on('apartments')->onDelete('cascade');
+            $table->timestamps();
+            $table->unique(['tenant_id', 'apartment_id']);
         });
 
         Schema::enableForeignKeyConstraints();
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('favorite_appartments');
+        Schema::dropIfExists('favorite_apartments');
     }
 };

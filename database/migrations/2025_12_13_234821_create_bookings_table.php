@@ -17,8 +17,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('tenant_id');
             $table->foreign('tenant_id')->references('id')->on('users')->onDelete('cascade');
-            $table->unsignedBigInteger('appartment_id');
-            $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
+            $table->unsignedBigInteger('apartment_id');
+            $table->foreign('apartment_id')->references('id')->on('apartments')->onDelete('cascade');
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('total_price', 12, 2);

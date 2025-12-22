@@ -4,13 +4,13 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class AdminAppartmentRequest extends FormRequest
+class StoreApartmentRequest extends FormRequest
 {
     /**
      */
     public function authorize()
     {
-        return $this->user()->role === 'admin';
+        return $this->user()->role === 'owner';
     }
 
     /**
@@ -18,7 +18,6 @@ class AdminAppartmentRequest extends FormRequest
     public function rules()
     {
         return [
-            'owner_id' => 'required|exists:users,id',
             'title' => 'required|string|max:255',
             'address' => 'required|string|max:500',
             'price_per_night' => 'required|numeric|min:0',
@@ -28,7 +27,6 @@ class AdminAppartmentRequest extends FormRequest
             'bathrooms' => 'required|integer|min:0',
             'governorate_id' => 'required|exists:governorates,id',
             'city' => 'required|string|max:100',
-            'status' => 'required|in:pending,approved,rejected',
             'description' => 'nullable|string',
             'amenities' => 'nullable|array',
             'amenities.*' => 'string'
@@ -37,5 +35,4 @@ class AdminAppartmentRequest extends FormRequest
 
     /**
      */
-    
 }

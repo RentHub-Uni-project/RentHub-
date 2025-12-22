@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class AppartmentImage extends Model
+class ApartmentImage extends Model
 {
     //
 }

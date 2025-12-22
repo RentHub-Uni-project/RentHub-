@@ -15,35 +15,35 @@ plan:
         * list users (admin)
         * get user (admin)
 
-    - appartments
-        * create appartment (owner)
-        * update my appartment (owner)
-        * delete my appartment (owner)
-        * list my appartments (owner)
+    - apartments
+        * create apartment (owner)
+        * update my apartment (owner)
+        * delete my apartment (owner)
+        * list my apartments (owner)
 
-        * list appartments (all)
-        * get appartment (all)
+        * list apartments (all)
+        * get apartment (all)
 
         * create, update, delete, list, get (admin)
 
-    - appartment_images (embeded with appartments' table controllers)
+    - apartment_images (embeded with apartments' table controllers)
 
-    - favorite_appartments
-        * add appartment to favorites (tenant)
-        * remove appartment from favorites (tenant)
-        * get appartment from favorites (tenant)         x
-        * list my favorite appartments (tenant)
+    - favorite_apartments
+        * add apartment to favorites (tenant)
+        * remove apartment from favorites (tenant)
+        * get apartment from favorites (tenant)         x
+        * list my favorite apartments (tenant)
 
         * create, delete, list, get (admin)
 
 
     - reviews
-        * create appartment review (tenant)
-        * update appartment review (tenant)
-        * delete appartment review (tenant)
+        * create apartment review (tenant)
+        * update apartment review (tenant)
+        * delete apartment review (tenant)
         * list my reviews (tenant)
 
-        * list appartment reviews (all)
+        * list apartment reviews (all)
 
         * create, update, delete, list (admin)
 
@@ -53,7 +53,7 @@ plan:
         * update booking (tenant)
         * get booking (tenant)
         * change booking status (owner)
-        * list my appartments' bookings (owner)
+        * list my apartments' bookings (owner)
 
         * create, update, delete, list, get (admin)
 
@@ -63,7 +63,7 @@ plan:
         * list my booking update requests (tenant)
         * get booking update request (tenant, owner)
         * change booking update request status (owner)
-        * list my appartments' bookings' update requests (owner)
+        * list my apartments' bookings' update requests (owner)
 
         * create, update, list, get, delete (admin)
 
@@ -83,3 +83,10 @@ commands:
 
     run:
         php artisan serve
+
+
+for amjad:
+    - one list endpoint for apartments with filtering
+    - apply filtering on adminIndex function in ApartmentController
+    - what amentities means in AdminApartmentRequest?
+    - make partial updates in AdminApartmentRequest for update controller

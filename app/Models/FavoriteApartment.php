@@ -4,16 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class FavoriteAppartment extends Model
+class FavoriteApartment extends Model
 {
     protected $fillable = [
         'tenant_id',
-        'appartment_id',
+        'apartment_id',
     ];
 
-    public function appartment()
+    public function apartment()
     {
-        return $this->belongsTo(Appartment::class, 'appartment_id');
+        return $this->belongsTo(Apartment::class, 'apartment_id');
     }
 
     public function tenant()
@@ -21,4 +21,3 @@ class FavoriteAppartment extends Model
         return $this->belongsTo(User::class, 'tenant_id');
     }
 }
-

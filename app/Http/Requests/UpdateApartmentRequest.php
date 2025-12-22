@@ -4,20 +4,20 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateAppartmentRequest extends FormRequest
+class UpdateApartmentRequest extends FormRequest
 {
     /**
      */
     public function authorize()
     {
         $user = $this->user();
-        $appartment = \App\Models\Appartment::find($this->route('id'));
+        $apartment = \App\Models\Apartment::find($this->route('id'));
 
-        if (!$appartment) {
+        if (!$apartment) {
             return false;
         }
 
-        return $user->role === 'admin' || $appartment->owner_id === $user->id;
+        return $user->role === 'admin' || $apartment->owner_id === $user->id;
     }
 
     /**
@@ -43,5 +43,4 @@ class UpdateAppartmentRequest extends FormRequest
 
     /**
      */
-    
 }

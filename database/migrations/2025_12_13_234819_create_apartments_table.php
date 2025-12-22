@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('appartments', function (Blueprint $table) {
+        Schema::create('apartments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('owner_id');
             $table->foreign('owner_id')->references('id')->on('users')->onDelete('cascade');
@@ -58,6 +58,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('appartments');
+        Schema::dropIfExists('apartments');
     }
 };

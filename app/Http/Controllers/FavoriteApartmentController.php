@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FavoriteAppartment;
+use App\Models\FavoriteApartment;
 use Illuminate\Http\Request;
-use App\Models\Appartment;
+use App\Models\Apartment;
 
 
-class FavoriteAppartmentController extends Controller
+class FavoriteApartmentController extends Controller
 {
-public function toggleFavorite(Request $request, $id)
+    public function toggleFavorite(Request $request, $id)
     {
-        $favorite = FavoriteAppartment::where('tenant_id', $request->user()->id)
-            ->where('appartment_id', $id)
+        $favorite = FavoriteApartment::where('tenant_id', $request->user()->id)
+            ->where('apartment_id', $id)
             ->first();
 
         if ($favorite) {
@@ -20,9 +20,9 @@ public function toggleFavorite(Request $request, $id)
             return response()->json(['message' => 'Removed from favorites']);
         }
 
-        FavoriteAppartment::create([
+        FavoriteApartment::create([
             'tenant_id' => $request->user()->id,
-            'appartment_id' => $id,
+            'apartment_id' => $id,
         ]);
 
         return response()->json(['message' => 'Added to favorites']);
@@ -32,7 +32,7 @@ public function toggleFavorite(Request $request, $id)
 
     public function myFavorites(Request $request)
     {
-        return Appartment::whereHas('favorites', function ($q) use ($request) {
+        return Apartment::whereHas('favorites', function ($q) use ($request) {
             $q->where('tenant_id', $request->user()->id);
         })->get();
     }

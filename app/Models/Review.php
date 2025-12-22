@@ -17,7 +17,7 @@ class Review extends Model
 
     protected $fillable = [
         'booking_id',
-        'appartment_id',
+        'apartment_id',
         'tenant_id',
         'rating',
         'comment',
@@ -33,9 +33,9 @@ class Review extends Model
         return $this->belongsTo(Booking::class, 'booking_id');
     }
 
-    public function appartment()
+    public function apartment()
     {
-        return $this->belongsTo(Appartment::class, 'appartment_id');
+        return $this->belongsTo(Apartment::class, 'apartment_id');
     }
 
     public function tenant()
@@ -43,5 +43,3 @@ class Review extends Model
         return $this->belongsTo(User::class, 'tenant_id');
     }
 }
-
-

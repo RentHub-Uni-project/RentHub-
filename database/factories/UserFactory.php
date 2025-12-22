@@ -12,33 +12,75 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
+        $firstName = $this->faker->firstName();
+        $lastName = $this->faker->lastName();
+
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'phone' => '+963' . $this->faker->numerify('9#######'),
+            'password' => Hash::make('admin'),
+            'role' => $this->faker->randomElement(['tenant', 'owner', 'admin']),
+            'birth_date' => $this->faker->dateTimeBetween('-60 years', '-18 years')->format('Y-m-d'),
+            'status' => $this->faker->randomElement(['approved', 'pending', 'rejected']),
+            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'updated_at' => now(),
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Indicate that the user is a tenant.
      */
-    public function unverified(): static
+    public function tenant(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+        return $this->state(fn(array $attributes) => [
+            'role' => 'tenant',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is an owner.
+     */
+    public function owner(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'role' => 'owner',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is an admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is approved.
+     */
+    public function approved(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'status' => 'approved',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is pending.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'status' => 'pending',
         ]);
     }
 }

@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-        'role' => RoleMiddleware::class,
+            'role' => RoleMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -31,4 +31,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
         });
+        // $exceptions->render(function (Throwable $e, Request $request) {
+
+        //     if ($request->expectsJson() || $request->is('api/*')) {
+
+        //         $response = [
+        //             'success' => false,
+        //             'message' => $e->getMessage(),
+        //         ];
+
+        //         if (app()->environment('local')) {
+        //             $response['debug'] = [
+        //                 'message' => $e->getMessage(),
+        //                 'file' => $e->getFile(),
+        //                 'line' => $e->getLine(),
+        //                 'exception' => get_class($e),
+        //             ];
+        //         }
+
+        //         return response()->json($response);
+        //     }
+
+        //     return null;
+        // });
     })->create();

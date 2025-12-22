@@ -9,15 +9,15 @@ use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
-    // list appartment reviews (all)
-    public function ratings($id)
+    // list apartment reviews (all)
+    public function reviews($id)
     {
-        return Review::where('appartment_id', $id)
+        return Review::where('apartment_id', $id)
             ->with('tenant:id,first_name,last_name')
             ->latest()
             ->get();
     }
-    // * create appartment review (tenant)
+    // * create apartment review (tenant)
 
     public function rate(Request $request, $id)
     {
@@ -25,7 +25,7 @@ class ReviewController extends Controller
 
         $data = $request->validate([
             'booking_id' => 'required|exists:bookings,id',
-            'appartment_id' => 'required|exists:appartments,id',
+            'apartment_id' => 'required|exists:apartments,id',
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
         ]);
@@ -48,7 +48,7 @@ class ReviewController extends Controller
 
         $review = Review::create([
             'booking_id' => $booking->id,
-            'appartment_id' => $booking->appartment_id,
+            'apartment_id' => $booking->apartment_id,
             'tenant_id' => $user->id,
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
@@ -91,7 +91,7 @@ class ReviewController extends Controller
         $user = $request->user();
 
         $reviews = Review::where('tenant_id', $user->id)
-            ->with('appartment:id,title')
+            ->with('apartment:id,title')
             ->latest()
             ->get();
 
@@ -103,7 +103,7 @@ class ReviewController extends Controller
     public function adminListReviews()
     {
         return Review::with([
-            'appartment:id,title',
+            'apartment:id,title',
             'tenant:id,first_name,last_name'
         ])
             ->latest()
@@ -115,7 +115,7 @@ class ReviewController extends Controller
     {
         $data = $request->validate([
             'booking_id' => 'required|exists:bookings,id',
-            'appartment_id' => 'required|exists:appartments,id',
+            'apartment_id' => 'required|exists:apartments,id',
             'tenant_id' => 'required|exists:users,id',
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',

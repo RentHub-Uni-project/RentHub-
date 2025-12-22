@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('appartment_images', function (Blueprint $table) {
+        Schema::create('apartment_images', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('appartment_id');
-            $table->foreign('appartment_id')->references('id')->on('appartments')->onDelete('cascade');
+            $table->unsignedBigInteger('apartment_id');
+            $table->foreign('apartment_id')->references('id')->on('apartments')->onDelete('cascade');
             $table->text('image_url');
             $table->boolean('is_main')->default(false);
             $table->integer('display_order')->nullable();
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('appartment_images');
+        Schema::dropIfExists('apartment_images');
     }
 };

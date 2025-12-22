@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Appartment extends Model
+class Apartment extends Model
 {
     use HasFactory;
 
-    protected $table = 'appartments';
+    protected $table = 'apartments';
 
     protected $fillable = [
         'owner_id',
@@ -44,7 +44,7 @@ class Appartment extends Model
 
     public function images()
     {
-        return $this->hasMany(AppartmentImage::class, 'apartment_id');
+        return $this->hasMany(ApartmentImage::class, 'apartment_id');
     }
 
     public function bookings()
@@ -58,8 +58,35 @@ class Appartment extends Model
     }
     public function favorites()
     {
-        return $this->hasMany(FavoriteAppartment::class, 'appartment_id');
+        return $this->hasMany(FavoriteApartment::class, 'apartment_id');
     }
 
 
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $model = $this->where($field, $value)->first();
+
+        if (!$model) {
+            abort(response()->json([
+                'message' => 'apartment not found',
+            ], 404));
+        }
+
+        return $model;
+    }
+
+    public function isPending()
+    {
+        return $this->status == "pending";
+    }
+    public function isRejected()
+    {
+        return $this->status == "rejected";
+    }
+    public function isApproved()
+    {
+        return $this->status == "approved";
+    }
 }

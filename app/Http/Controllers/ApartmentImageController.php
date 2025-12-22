@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AppartmentImage;
+use App\Models\ApartmentImage;
 use Illuminate\Http\Request;
 
-class AppartmentImageController extends Controller
+class ApartmentImageController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class AppartmentImageController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(AppartmentImage $appartmentImage)
+    public function show(ApartmentImage $apartmentImage)
     {
         //
     }
@@ -42,7 +42,7 @@ class AppartmentImageController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(AppartmentImage $appartmentImage)
+    public function edit(ApartmentImage $apartmentImage)
     {
         //
     }
@@ -50,7 +50,7 @@ class AppartmentImageController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, AppartmentImage $appartmentImage)
+    public function update(Request $request, ApartmentImage $apartmentImage)
     {
         //
     }
@@ -58,7 +58,7 @@ class AppartmentImageController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(AppartmentImage $appartmentImage)
+    public function destroy(ApartmentImage $apartmentImage)
     {
         //
     }

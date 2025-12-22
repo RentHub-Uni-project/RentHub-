@@ -10,7 +10,6 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $guarded = [];
@@ -50,9 +49,24 @@ class User extends Authenticatable
             "last_name" => $this->last_name,
             "status" => $this->status,
             "phone" => $this->phone,
+            "role" => $this->role,
             "birth_date" => $this->birth_date,
             "id_card" => $this->id_card,
             "avatar" => $this->avatar
         ];
+    }
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $model = $this->where($field, $value)->first();
+
+        if (!$model) {
+            abort(response()->json([
+                'message' => 'User not found',
+            ], 404));
+        }
+
+        return $model;
     }
 }
