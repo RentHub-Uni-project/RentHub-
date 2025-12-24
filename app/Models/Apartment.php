@@ -36,6 +36,9 @@ class Apartment extends Model
         'longitude' => 'decimal:8',
     ];
 
+    protected $appends = ['average_rating'];
+
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -59,6 +62,14 @@ class Apartment extends Model
     {
         return $this->hasMany(FavoriteApartment::class, 'apartment_id');
     }
+
+    public function getAverageRatingAttribute()
+{
+    return round(
+        $this->reviews()->avg('rating'),
+        1
+    );
+}
 
 
     public function resolveRouteBinding($value, $field = null)
