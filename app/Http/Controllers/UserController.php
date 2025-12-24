@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,14 @@ use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    public function getUser(Request $request, User $user)
+    {
+
+        if (!$request->user()->isAdmin() && !$user->isApproved()) {
+            return response()->json(["message" => "user not found."], 404);
+        }
+        return response()->json(["message" => "user found successfully.", "user" => new UserResource($user)]);
+    }
     public function updateProfile(Request $request)
     {
         $user = $request->user();
@@ -65,13 +74,13 @@ class UserController extends Controller
 
         return response()->json([
             "message" => "Your profile updated it successfully, waiting for admin approval",
-            'user' => $user->serialize()
+            'user' => new UserResource($user)
         ], 200);
     }
     public function getProfile(Request $request)
     {
 
-        return response()->json(["message" => "success", "user" => $request->user()->serialize()], 200);
+        return response()->json(["message" => "success", "user" => new UserResource($request->user())], 200);
     }
     public function deleteProfile(Request $request)
     {
@@ -80,7 +89,7 @@ class UserController extends Controller
     }
 
     // Admin
-    public function createUserAdmin(Request $request)
+    public function adminCreateUser(Request $request)
     {
         $validatedData = $request->validate([
             "phone" => "string|unique:users,phone",
@@ -90,6 +99,7 @@ class UserController extends Controller
             "last_name" => "string|max:50",
             "password" => "min:8",
             "birth_date" => "date",
+            "wallet" => "sometimes|decimal:8,2",
             "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
             "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
         ]);
@@ -117,11 +127,11 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'User created successfully.',
-            'user' => $user->serialize()
+            'user' => new UserResource($user)
         ], 201);
     }
 
-    public function updateUserAdmin(Request $request, User $user)
+    public function adminUpdateUser(Request $request, User $user)
     {
         $validatedData = $request->validate([
             "phone" => "string|unique:users,phone",
@@ -131,6 +141,7 @@ class UserController extends Controller
             "last_name" => "string|max:50",
             "password" => "min:8",
             "birth_date" => "date",
+            "wallet" => "sometimes|decimal:8,2",
             "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
             "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
         ]);
@@ -165,11 +176,11 @@ class UserController extends Controller
 
         return response()->json([
             "message" => "User updated successfully.",
-            'user' => $user->serialize()
+            'user' => new UserResource($user)
         ], 200);
     }
 
-    public function listUsersAdmin(Request $request)
+    public function adminListUsers(Request $request)
     {
         $query = User::query();
 
@@ -210,7 +221,7 @@ class UserController extends Controller
         return response()->json(["message" => "success", "data" => $result], 200);
     }
 
-    public function deleteUser(Request $request, User $user)
+    public function adminDeleteUser(Request $request, User $user)
     {
         $user->delete();
         return response()->json(["message" => "User deleted successfully"], 204);

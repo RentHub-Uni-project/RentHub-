@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreApartmentRequest;
 use App\Http\Requests\UpdateApartmentRequest;
 use App\Http\Requests\AdminApartmentRequest;
+use App\Http\Requests\AdminUpdateApartmentRequest;
+use App\Http\Resources\ApartmentResource;
 
 class ApartmentController extends Controller
 {
@@ -26,8 +28,11 @@ class ApartmentController extends Controller
 
 
 
+        $query->when($request->filled('address'), fn($q) => $q->where('address', 'LIKE', '%' . $request->address . '%'));
+        $query->when($request->filled('governorate'), fn($q) => $q->where('governorate', 'LIKE', '%' . $request->governorate . '%'));
         $query->when($request->filled('title'), fn($q) => $q->where('title', 'LIKE', '%' . $request->title . '%'));
-        $query->when($request->filled('city'), fn($q) => $q->where('city', $request->city));
+        $query->when($request->filled('bedrooms'), fn($q) => $q->where('bedrooms', $request->bedrooms));
+        $query->when($request->filled('bathrooms'), fn($q) => $q->where('bathrooms', $request->bathrooms));
 
         // price range
         $query->when($request->filled('min_price'), fn($q) => $q->where('price_per_night', '>=', $request->min_price));
@@ -38,12 +43,8 @@ class ApartmentController extends Controller
         });
 
         // sorting: default to approved first, then by specified column
-        if (!$request->has('sort_by')) {
-            $query->orderByRaw("FIELD(status, 'approved', 'pending', 'rejected')")
-                ->orderBy('created_at', 'desc');
-        } else {
-            $query->orderBy($request->get('sort_by'), $request->get('sort_order', 'desc'));
-        }
+
+        $query->orderBy($request->get('sort_by'), $request->get('sort_order', 'desc'));
 
         $result = $query->paginate($request->get('per_page', 15));
 
@@ -51,9 +52,12 @@ class ApartmentController extends Controller
     }
 
     // Show details of a specific apartment
-    public function show($id)
+    public function show(Request $request, Apartment $apartment)
     {
-        $apartment = Apartment::where('status', 'approved')->findOrFail($id);
+        $user = $request->user();
+        if (!$user->isAdmin() && !$apartment->isApproved()) {
+            return response()->json(["message" => "this appartment is not approved, you can't see its details."], 403);
+        }
         return response()->json(["message" => "apartment found successfully.", "apartment" => $apartment]);
     }
 
@@ -99,25 +103,25 @@ class ApartmentController extends Controller
         return Apartment::create($data);
     }
 
-    public function update(UpdateApartmentRequest $request, $id)
+    public function update(UpdateApartmentRequest $request, Apartment $apartment)
     {
         $user = $request->user();
-        if ($user->role === 'owner') {
-            $apartment = Apartment::where('owner_id', $user->id)->findOrFail($id);
-        } else {
-            $apartment = Apartment::findOrFail($id);
+        if ($apartment->owner_id != $user->id) {
+            return response()->json(["message" => "you are no the owner of the provided apartment."], 403);
         }
 
         $apartment->update($request->validated());
-        return $apartment;
+        return response()->json(["message" => "apartment updated successfully.", "apartment" => new ApartmentResource($apartment)]);
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, Apartment $apartment)
     {
         $user = $request->user();
-        $apartment = Apartment::where('owner_id', $user->id)->findOrFail($id);
+        if ($apartment->owner_id != $user->id) {
+            return response()->json(["message" => "you are no the owner of the provided apartment."], 403);
+        }
         $apartment->delete();
-        return response()->json(['message' => 'Deleted']);
+        return response()->json(['message' => 'apartment deleted successfully.'], 204);
     }
 
     // ======================
@@ -126,42 +130,40 @@ class ApartmentController extends Controller
 
     public function adminIndex()
     {
-        return Apartment::all();
+        return response()->json(["message" => "success", "apartments" => Apartment::all()]);
     }
 
     public function adminStore(AdminApartmentRequest $request)
     {
-        return Apartment::create($request->validated());
+        $apartment = Apartment::create($request->validated());
+        return response()->json(["message" => "apartment created successfully.", "apartment" => new ApartmentResource($apartment)], 201);
     }
 
-    public function adminUpdate(AdminApartmentRequest $request, $id)
+    public function adminUpdate(AdminUpdateApartmentRequest $request, Apartment $apartment)
     {
-        $apartment = Apartment::findOrFail($id);
         $apartment->update($request->validated());
-        return $apartment;
+        return response()->json(["message" => "apartment updated successfully.", "apartment" => new ApartmentResource($apartment)]);
     }
 
-    public function adminDelete($id)
+    public function adminDelete(Request $request, Apartment $apartment)
     {
-        Apartment::findOrFail($id)->delete();
-        return response()->json(['message' => 'Deleted by admin']);
+        $apartment->delete();
+        return response()->json(['message' => 'apartment deleted successfully.'], 204);
     }
 
     // ======================
     //  ADMIN Approval
     // ======================
 
-    public function approve($id)
+    public function approve(Apartment $apartment)
     {
-        $apartment = Apartment::where('status', 'pending')->findOrFail($id);
         $apartment->update(['status' => 'approved']);
-        return response()->json(['message' => 'Apartment approved']);
+        return response()->json(['message' => 'Apartment approved', "apartment" => new ApartmentResource($apartment)]);
     }
 
-    public function reject($id)
+    public function reject(Apartment $apartment)
     {
-        $apartment = Apartment::where('status', 'pending')->findOrFail($id);
         $apartment->update(['status' => 'rejected']);
-        return response()->json(['message' => 'Apartment rejected']);
+        return response()->json(['message' => 'Apartment rejected',  "apartment" => new ApartmentResource($apartment)]);
     }
 }

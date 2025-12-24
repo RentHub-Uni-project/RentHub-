@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-
+use App\Models\Apartment;
 use App\Models\Review;
 use App\Models\Booking;
 use Illuminate\Http\Request;
@@ -10,12 +10,13 @@ use Illuminate\Http\Request;
 class ReviewController extends Controller
 {
     // list apartment reviews (all)
-    public function reviews($id)
+    public function reviews(Request $request, Apartment $apartment)
     {
-        return Review::where('apartment_id', $id)
-            ->with('tenant:id,first_name,last_name')
-            ->latest()
-            ->get();
+        $user = $request->user();
+        if (!$user->isAdmin() && !$apartment->isApproved()) {
+            return response()->json(["message" => "this appartment is not approved, you can't see its details."], 403);
+        }
+        return response()->json(["message" => "success", "reviews" => $apartment->reviews()]);
     }
     // * create apartment review (tenant)
 
@@ -98,16 +99,31 @@ class ReviewController extends Controller
         return $reviews;
     }
 
+    // ===============
+    //      ADMIN
+    // ===============
+
+    public function adminGetReview(Request $request, Review $review)
+    {
+        return response()->json([
+            'message' => 'Review found successfully.',
+            'reviews' => $review
+        ]);
+    }
 
     //  * List all reviews in the system
     public function adminListReviews()
     {
-        return Review::with([
+        $reviews = Review::with([
             'apartment:id,title',
             'tenant:id,first_name,last_name'
         ])
             ->latest()
             ->get();
+        return response()->json([
+            'message' => 'success.',
+            'reviews' => $reviews
+        ]);
     }
 
     //  * Create a review (Admin only)
@@ -120,30 +136,35 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
         ]);
+        $review = Review::create($data);
 
-        return Review::create($data);
+        return response()->json([
+            'message' => 'Review created successfully.',
+            'review' => $review
+        ], 201);
     }
 
     //  * Update any review
-    public function adminUpdateReview(Request $request, $id)
+    public function adminUpdateReview(Request $request, Review $review)
     {
-        $review = Review::findOrFail($id);
-
         $review->update($request->validate([
             'rating' => 'sometimes|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
         ]));
 
-        return $review;
+        return response()->json([
+            'message' => 'Review updated successfully.',
+            'review' => $review
+        ]);
     }
 
     //  * Delete any review
-    public function adminDeleteReview($id)
+    public function adminDeleteReview(Request $request, Review $review)
     {
-        Review::findOrFail($id)->delete();
+        $review->delete();
 
         return response()->json([
-            'message' => 'Review deleted by admin'
-        ]);
+            'message' => 'Review deleted successfully.'
+        ], 204);
     }
 }

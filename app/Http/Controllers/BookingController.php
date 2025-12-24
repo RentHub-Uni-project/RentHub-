@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
+use App\Enums\BookingUpdateRequestStatus;
 use App\Enums\UserRole;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\BookingUpdateRequestResource;
@@ -10,6 +11,7 @@ use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\BookingUpdateRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -36,9 +38,6 @@ class BookingController extends Controller
                 "message" => "this aprtment is not approved, you can't create a booking for it."
             ], 400);
         }
-        if (!$apartment->is_available) {
-            return response()->json(["message" => "this apartment is not available right now."], 400);
-        }
 
         $total_price = Booking::calculateTotalPrice($data["start_date"], $data["end_date"], $apartment->price_per_night);
 
@@ -55,23 +54,16 @@ class BookingController extends Controller
             "booking" => new BookingResource($booking)
         ], 201);
     }
-    public function deleteBooking(Request $request, Booking $booking)
+    public function cancelBooking(Request $request, Booking $booking)
     {
         // check booking owner
         $user = $request->user();
         if ($user->id != $booking->tenant_id) {
             return response()->json([
                 "message" => "you can't perform this action, you are not the owner of the given booking."
-            ], 400);
+            ], 403);
         }
-        // check if booking approved
-        if ($booking->isApproved()) {
-            return response()->json([
-                "message" => "this booking is approved and can't be deleted."
-            ], 400);
-        }
-
-        $booking->delete();
+        $booking->update(["status" => BookingStatus::CANCELLED]);
         return response()->json(["message" => "booking deleted successfully"]);
     }
     public function getBooking(Request $request, Booking $booking)
@@ -81,11 +73,11 @@ class BookingController extends Controller
         if ($user->id != $booking->tenant_id) {
             return response()->json([
                 "message" => "you are not the owner of the given booking."
-            ], 400);
+            ], 403);
         }
         return response()->json(["message" => "booking found successfully", "booking" => new BookingResource($booking)]);
     }
-    public function listMyBookings(Request $request, User $tenant)
+    public function listMyBookings(Request $request)
     {
         $user = $request->user();
         $bookings = Booking::where("tenant_id", $user->id);
@@ -93,24 +85,45 @@ class BookingController extends Controller
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
 
+    public function getUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
+    {
+        $user = $request->user();
+        $booking = $updateRequest->booking;
+        if ($booking->tenant_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of this booking."], 403);
+        }
+
+        return response()->json(["message" => "update request found successfully", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
+    }
+
+    public function listUpdateRequests(Request $request, Booking $booking)
+    {
+        $user = $request->user();
+        if ($booking->tenant_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of this booking."], 403);
+        }
+
+        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id);
+
+        return response()->json(["message" => "success", "updaeRequests" => BookingUpdateRequestResource::collection($updateRequests)]);
+    }
+
     public function createUpdateRequest(Request $request, Booking $booking)
     {
         $user = $request->user();
         // check tenant
         if ($booking->tenant_id != $user->id) {
-            return response()->json(["message" => "you are not the owner of provided booking."]);
+            return response()->json(["message" => "you are not the owner of provided booking."], 403);
         }
-        $apartment = $booking->apartment;
 
         $data = $request->validate([
             "request_tenant_notes" => "sometimes|nullable|string",
             "requested_start_date" => "required|date",
-            "requested_end_date" => "required|date|after:start_date",
+            "requested_end_date" => "required|date|after:requested_start_date",
             "request_number_of_guests" => "sometimes|nullable|numeric"
         ]);
-        // check start_date & end_date
+        // check start_date
         $start_date = $data["start_date"];
-        $end_date = $data["end_date"];
         // if provided start_date == previous one, no validation needed
         if ($start_date != $booking->start_date) {
             if ($start_date < new DateTime()) {
@@ -118,15 +131,57 @@ class BookingController extends Controller
             }
         }
 
-        // calculate new totalPrice
-        $total_price = Booking::calculateTotalPrice($start_date, $end_date, $apartment->price_per_night);
+        $updateRequest = BookingUpdateRequest::create([...$data, $booking]);
 
-        $updateRequest = BookingUpdateRequest::create([...$data, $total_price]);
-
-        return response()->json(["message" => "update request created successfully.", "updateRequest" => $updateRequest], 201);
+        return response()->json(["message" => "update request created successfully, waiting approval from owner.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)], 201);
     }
-    public function editUpdateRequest(Request $request, BookingUpdateRequest $updateRequest) {}
-    public function deleteUpdateRequest(Request $request, BookingUpdateRequest $updateRequest) {}
+    public function editUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
+    {
+        $user = $request->user();
+        $booking = $updateRequest->booking;
+        // check tenant
+        if ($booking->tenant_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of booking."], 403);
+        }
+        // check status
+        if (!$updateRequest->isPending()) {
+            return response()->json(["message" => "this update request is " . $updateRequest->status . " and you can't edit it."], 400);
+        }
+
+        $data = $request->validate([
+            "request_tenant_notes" => "sometimes|nullable|string",
+            "requested_start_date" => "required|date",
+            "requested_end_date" => "required|date|after:requested_start_date",
+            "request_number_of_guests" => "sometimes|nullable|numeric"
+        ]);
+        // check start_date
+        $start_date = $data["start_date"];
+        // if provided start_date == previous one, no validation needed
+        if ($start_date != $booking->start_date) {
+            if ($start_date < new DateTime()) {
+                return response()->json(["message" => "provided start_date should be after today."], 400);
+            }
+        }
+        $updateRequest->update($data);
+
+        return response()->json(["message" => "update request updated successfully, waiting approval from owner.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
+    }
+    public function cancelUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
+    {
+        $user = $request->user();
+        $booking = $updateRequest->booking;
+        // check tenant
+        if ($booking->tenant_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of booking."], 403);
+        }
+        // check status
+        if (!$updateRequest->isPending()) {
+            return response()->json(["message" => "this update request is " . $updateRequest->status . " and you can't cancel it."], 400);
+        }
+        $updateRequest->update(["status" => BookingUpdateRequestStatus::CANCELLED, "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
+
+        return response()->json(["message" => "update request cancelled successfully."]);
+    }
 
     // =======================
     //          OWNER
@@ -145,18 +200,19 @@ class BookingController extends Controller
             return response()->json(["message" => "this booking is rejected, you can't change its status."], 400);
         }
         // check apartment availablity
-        if (!$apartment->is_available) {
-            return response()->json(["message" => "the booking apartment is not available right now, you can't approve a new booking."]);
+        $availability = $apartment->checkAvailability($booking->start_date, $booking->end_date);
+        if (!$availability["available"]) {
+            return response()->json(["message" => $availability["message"]], 400);
         }
 
-        // TODO: handle user wallet
+        // handle user wallet
+        $wallet = $user->wallet;
+        if ($wallet < $booking->total_price) {
+            return response()->json(["message" => "you can't approve this booking, the user has no enough money."]);
+        }
+        $user->update(["wallet" => $wallet - $booking->total_price]);
 
         $booking->update(["status" => BookingStatus::APPROVED]);
-
-        // update apartment
-        $apartment->update([
-            "is_available" => false
-        ]);
 
         return response()->json(["message" => "booking approved successfully", "booking" => new BookingResource($booking)]);
     }
@@ -232,9 +288,9 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of booking's apartment."]);
         }
 
-        $updatedRequests = BookingUpdateRequest::where("booking_id", $booking->id);
+        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id);
 
-        return response()->json(["message" => "success", "updateRequests" => BookingUpdateRequestResource::collection($updatedRequests)]);
+        return response()->json(["message" => "success", "updateRequests" => BookingUpdateRequestResource::collection($updateRequests)]);
     }
 
     // =======================
@@ -248,7 +304,7 @@ class BookingController extends Controller
             "number_of_guests" => "required|integer|min:1",
             "tenant_notes" => "nullable|string",
             "tenant_id" => 'required|string',
-            "status" => Rule::enum(UserRole::class)
+            "status" =>  ['required', Rule::enum(BookingStatus::class)]
         ]);
 
         // check apartment
@@ -257,9 +313,15 @@ class BookingController extends Controller
                 "message" => "this aprtment is not approved, you can't create a booking for it."
             ], 400);
         }
-        if (!$apartment->is_available) {
-            return response()->json(["message" => "this apartment is not available right now."], 400);
+        // check apartment availablity
+        if ($validated_data["status"] == BookingStatus::APPROVED->value) {
+            $availability = $apartment->checkAvailability($validated_data["start_date"], $validated_data["end_date"]);
+            return response()->json(["message" => $availability], 400);
+            if (!$availability["available"]) {
+                return response()->json(["message" => $availability["message"]], 400);
+            }
         }
+
         // check tenant
         $tenant = User::findOrFail($validated_data["tenant_id"]);
         if (!$tenant->role == UserRole::TENANT) {
@@ -364,8 +426,8 @@ class BookingController extends Controller
     }
     public function adminListUpdateRequests(Request $request, Booking $booking)
     {
-        $updatedRequests = BookingUpdateRequest::where("booking_id", $booking->id);
-        return response()->json(["message" => "success", "updateRequests" => BookingUpdateRequestResource::collection($updatedRequests)]);
+        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id);
+        return response()->json(["message" => "success", "updateRequests" => BookingUpdateRequestResource::collection($updateRequests)]);
     }
     public function adminDeleteUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
     {

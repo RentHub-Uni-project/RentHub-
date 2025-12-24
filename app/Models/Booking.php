@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BookingStatus;
+use Carbon\Carbon;
 use DateTime;
 use Illuminate\Database\Eloquent\Model;
 
@@ -31,21 +32,36 @@ class Booking extends Model
 
     public function isApproved()
     {
-        return $this->status == BookingStatus::APPROVED;
+        return $this->status == BookingStatus::APPROVED->value;
     }
     public function isRejected()
     {
-        return $this->status == BookingStatus::REJECTED;
+        return $this->status == BookingStatus::REJECTED->value;
     }
     public function isPending()
     {
-        return $this->status == BookingStatus::PENDING;
+        return $this->status == BookingStatus::PENDING->value;
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $model = $this->where($field, $value)->first();
+
+        if (!$model) {
+            abort(response()->json([
+                'message' => 'booking not found',
+            ], 404));
+        }
+
+        return $model;
     }
 
     public static function calculateTotalPrice($start_date, $end_date, $price_per_night)
     {
-        $interval = $start_date->diff($end_date);
-        $total_price = $interval->days * $price_per_night;
+        $days = Carbon::parse($start_date)->diffInDays(Carbon::parse($end_date));
+        $total_price = $days * $price_per_night;
 
         return $total_price;
     }
