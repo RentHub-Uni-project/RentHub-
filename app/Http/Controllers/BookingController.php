@@ -64,12 +64,13 @@ class BookingController extends Controller
             ], 403);
         }
         $booking->update(["status" => BookingStatus::CANCELLED]);
-        return response()->json(["message" => "booking deleted successfully"]);
+        return response()->json(["message" => "booking cancelled successfully", "booking" => new BookingResource($booking)]);
     }
     public function getBooking(Request $request, Booking $booking)
     {
         // check booking owner
         $user = $request->user();
+        $booking->load(["apartment"]);
         if ($user->id != $booking->tenant_id) {
             return response()->json([
                 "message" => "you are not the owner of the given booking."
@@ -80,7 +81,7 @@ class BookingController extends Controller
     public function listMyBookings(Request $request)
     {
         $user = $request->user();
-        $bookings = Booking::where("tenant_id", $user->id);
+        $bookings = Booking::where("tenant_id", $user->id)->get();
 
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
@@ -120,7 +121,7 @@ class BookingController extends Controller
             "request_tenant_notes" => "sometimes|nullable|string",
             "requested_start_date" => "required|date",
             "requested_end_date" => "required|date|after:requested_start_date",
-            "request_number_of_guests" => "sometimes|nullable|numeric"
+            "requested_number_of_guests" => "sometimes|nullable|numeric"
         ]);
         // check start_date
         $start_date = $data["start_date"];
@@ -152,7 +153,7 @@ class BookingController extends Controller
             "request_tenant_notes" => "sometimes|nullable|string",
             "requested_start_date" => "required|date",
             "requested_end_date" => "required|date|after:requested_start_date",
-            "request_number_of_guests" => "sometimes|nullable|numeric"
+            "requested_number_of_guests" => "sometimes|nullable|numeric"
         ]);
         // check start_date
         $start_date = $data["start_date"];
@@ -178,15 +179,24 @@ class BookingController extends Controller
         if (!$updateRequest->isPending()) {
             return response()->json(["message" => "this update request is " . $updateRequest->status . " and you can't cancel it."], 400);
         }
-        $updateRequest->update(["status" => BookingUpdateRequestStatus::CANCELLED, "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
+        $updateRequest->update(["status" => BookingUpdateRequestStatus::CANCELLED]);
 
-        return response()->json(["message" => "update request cancelled successfully."]);
+        return response()->json(["message" => "update request cancelled successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
 
     // =======================
     //          OWNER
     // =======================
-    public function ownerGetBooking(Request $request, Booking $booking) {}
+    public function ownerGetBooking(Request $request, Booking $booking)
+    {
+        $user = $request->user();
+        $apartment = $booking->apartment;
+        if ($apartment->owner_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of this booking's apartment."], 403);
+        }
+
+        return response()->json(["message" => "booking found successfully.", "booking" => new BookingResource($booking)]);
+    }
     public function ownerApproveBooking(Request $request, Booking $booking)
     {
         $user = $request->user();
@@ -196,8 +206,14 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of the booking apartment."], 400);
         }
         // check booking status
+        if ($booking->isApproved()) {
+            return response()->json(["message" => "this booking is approved already."], 400);
+        }
         if ($booking->isRejected()) {
             return response()->json(["message" => "this booking is rejected, you can't change its status."], 400);
+        }
+        if ($booking->isCancelled()) {
+            return response()->json(["message" => "this booking is cancelled, you can't change its status."], 400);
         }
         // check apartment availablity
         $availability = $apartment->checkAvailability($booking->start_date, $booking->end_date);
@@ -225,8 +241,14 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of the booking apartment."], 400);
         }
         // check booking status
+        if ($booking->isRejected()) {
+            return response()->json(["message" => "this booking is rejected already."], 400);
+        }
         if ($booking->isApproved()) {
             return response()->json(["message" => "this booking is approved, you can't change its status."], 400);
+        }
+        if ($booking->isCancelled()) {
+            return response()->json(["message" => "this booking is cancelled, you can't change its status."], 400);
         }
 
         $booking->update(["status" => BookingStatus::REJECTED]);
@@ -240,7 +262,7 @@ class BookingController extends Controller
         if ($apartment->owner_id != $user->id) {
             return response()->json(["message" => "you are not the owner of the booking apartment."], 400);
         }
-        $bookings = Booking::where("apartment_id", $apartment->id);
+        $bookings = Booking::where("apartment_id", $apartment->id)->get();
 
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
@@ -266,19 +288,67 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of booking's apartment."], 400);
         }
         // check if booking approved
+        if ($booking->isRejected()) {
+            return response()->json(["message" => "the related booking is rejected so you can't change the update request status."], 400);
+        }
+        // check request status
+        if ($updateRequest->isApparoved()) {
+            return response()->json(["message" => "this update request is approved already."], 400);
+        }
+        if ($updateRequest->isRejected()) {
+            return response()->json(["message" => "this update request is rejected, you can't approve it."], 400);
+        }
+        if ($updateRequest->isCancelled()) {
+            return response()->json(["message" => "this update request is cancelled, you can't approve it."], 400);
+        }
+        // calculate total price
+        $total_price = Booking::calculateTotalPrice($updateRequest->start_date, $updateRequest->end_date, $apartment->price_per_nigth);
 
-        // check start_date & end_date
-        $start_date = $updateRequest->start_date;
-        $end_date = $updateRequest->end_date;
-        // validate them
-        if ($end_date <= $start_date) {
-            return response()->json(["message" => "end_date should be after start_date."], 400);
+        // update user wallet
+        $tenant = $booking->tenant;
+        $wallet = $tenant->wallet;
+        $amount_to_add = $booking->total_price - $total_price;
+        // check if user has enough money
+        if ($amount_to_add < 0) {
+            if ($wallet < $amount_to_add) {
+                return response()->json(["message" => "user has no enough money for the specified duration in the update request."]);
+            }
+        }
+        $tenant->update(["wallet" => $wallet + $amount_to_add]);
+        // update request
+        $updateRequest->update(["status" => BookingUpdateRequestStatus::APPROVED]);
+
+        return response()->json(["message" => "update request approved successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
+    }
+    public function ownerRejectUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
+    {
+        $user = $request->user();
+        // check owner
+        $booking = $updateRequest->booking;
+        $apartment = $booking->apartment;
+        if ($apartment->owner_id != $user->id) {
+            return response()->json(["message" => "you are not the owner of booking's apartment."], 400);
+        }
+        // check if booking approved
+        if ($booking->isRejected()) {
+            return response()->json(["message" => "the related booking is rejected so you can't change the update request status."], 400);
+        }
+        // check request status
+        if ($updateRequest->isApparoved()) {
+            return response()->json(["message" => "this update request is approved, you can't change its status."], 400);
+        }
+        if ($updateRequest->isRejected()) {
+            return response()->json(["message" => "this update request is rejected already."], 400);
+        }
+        if ($updateRequest->isCancelled()) {
+            return response()->json(["message" => "this update request is cancelled, you can't reject it."], 400);
         }
 
-        // calculate total price
-        $total_price = Booking::calculateTotalPrice($start_date, $end_date, $apartment->price_per_nigth);
+        // update request
+        $updateRequest->update(["status" => BookingUpdateRequestStatus::REJECTED]);
+
+        return response()->json(["message" => "update request rejected successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
-    public function ownerRejectUpdateRequest(Request $request, BookingUpdateRequest $updateRequest) {}
 
     public function ownerListUpdateRequests(Request $request, Booking $booking)
     {
@@ -288,7 +358,7 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of booking's apartment."]);
         }
 
-        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id);
+        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id)->get();
 
         return response()->json(["message" => "success", "updateRequests" => BookingUpdateRequestResource::collection($updateRequests)]);
     }
@@ -330,8 +400,7 @@ class BookingController extends Controller
         // handle total_price
         $start_date = new DateTime($validated_data["start_date"]);
         $end_date = new DateTime($validated_data["end_date"]);
-        $interval = $start_date->diff($end_date);
-        $total_price = $interval->days * $apartment->price_per_night;
+        $total_price = Booking::calculateTotalPrice($validated_data["start_date"], $validated_data["end_date"], $apartment->price_per_night);
 
         $booking = Booking::create([
             ...$validated_data,
@@ -347,8 +416,8 @@ class BookingController extends Controller
     public function adminUpdateBooking(Request $request, Booking $booking)
     {
         $validated_data = $request->validate([
-            'start_date' => 'date|after_or_equal:today',
-            'end_date' => 'date|after:start_date',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
             "number_of_guests" => "integer|min:1",
             "tenant_notes" => "nullable|string",
             "status" => Rule::enum(UserRole::class)
@@ -362,16 +431,7 @@ class BookingController extends Controller
         $apartment = $booking->apartment;
 
         // handle total_price
-        $start_date = $booking->start_date;
-        $end_date = $booking->end_date;
-        if (array_key_exists("start_date", $validated_data)) {
-            $start_date = $validated_data["start_date"];
-        }
-        if (array_key_exists("end_date", $validated_data)) {
-            $end_date = $validated_data["end_date"];
-        }
-        $interval = $start_date->diff($end_date);
-        $total_price = $interval->days * $apartment->price_per_night;
+        $total_price = Booking::calculateTotalPrice($validated_data["start_date"], $validated_data["end_date"], $apartment->price_per_night);
 
         $booking->update([...$validated_data, "total_price" => $total_price]);
 
@@ -432,7 +492,6 @@ class BookingController extends Controller
     public function adminDeleteUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
     {
         $updateRequest->delete();
-
         return response()->json(["message" => "update request deleted successfully"], 204);
     }
 }

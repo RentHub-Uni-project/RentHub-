@@ -7,15 +7,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class AdminApartmentRequest extends FormRequest
 {
-    /**
-     */
-    public function authorize()
-    {
-        return $this->user()->role === 'admin';
-    }
-
-    /**
-     */
     public function rules()
     {
         return [

@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ApartmentController;
+use App\Http\Controllers\FavoriteApartmentController;
 use App\Http\Controllers\ReviewController;
 use App\Models\Booking;
 use App\Models\BookingUpdateRequest;
@@ -31,10 +32,10 @@ Route::prefix("users")->middleware(['auth:sanctum'])->group(function () {
 
     // Admin APIs
     Route::prefix("admin")->middleware("role:admin")->group(function () {
-        Route::post('/create', [UserController::class, "createUserAdmin"]);
-        Route::get('/list', [UserController::class, "listUsersAdmin"]);
-        Route::patch('/update/{user}', [UserController::class, "updateUserAdmin"]);
-        Route::delete('/delete/{user}', [UserController::class, "deleteUserAdmin"]);
+        Route::post('/create', [UserController::class, "adminCreateUser"]);
+        Route::get('/list', [UserController::class, "adminListUsers"]);
+        Route::patch('/update/{user}', [UserController::class, "adminUpdateUser"]);
+        Route::delete('/delete/{user}', [UserController::class, "adminDeleteUser"]);
     });
 });
 
@@ -46,7 +47,7 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
     Route::get('/get/{apartment}', [ApartmentController::class, 'show']);
     Route::get('/search', [ApartmentController::class, 'search']); // Search by address
     Route::get('/filter', [ApartmentController::class, 'filter']);      // Filter apartments
-    Route::get('/list-reviews/{apartment}', [ReviewController::class, 'reviews']); // Show ratings
+    Route::get('/list-reviews/{apartment}', [ReviewController::class, 'listApartmentReviews']); // Show ratings
 
     // Admin APIs
     Route::prefix("admin")->middleware("role:admin")->group(function () {
@@ -70,13 +71,15 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
 
     // Tenant APIs
     Route::prefix("tenant")->middleware("role:tenant")->group(function () {
-        Route::post('/mark-as-favorite/{id}', [ApartmentController::class, 'toggleFavorite']);
-        Route::get('/list-my-favorites', [ApartmentController::class, 'myFavorites']);
+        Route::post('/mark-as-favorite/{apartment}', [FavoriteApartmentController::class, 'toggleFavorite']);
+        Route::get('/list-my-favorites', [FavoriteApartmentController::class, 'myFavorites']);
     });
 });
 
 // Reviews
 Route::prefix("reviews")->middleware(['auth:sanctum'])->group(function () {
+    // General APIs
+    Route::get('/get/{review}', [ReviewController::class, 'getReview']);
     // Admin APIs
     Route::prefix("admin")->middleware("role:admin")->group(function () {
         Route::get('/get/{review}', [ReviewController::class, 'adminGetReview']);
@@ -88,10 +91,10 @@ Route::prefix("reviews")->middleware(['auth:sanctum'])->group(function () {
 
     // Tenant APIs
     Route::prefix("tenant")->middleware("role:tenant")->group(function () {
-        Route::post('/create/{id}', [ReviewController::class, 'rate']);
-        Route::get('/list', [ApartmentController::class, 'myReviews']);
-        Route::put('/update/{id}', [ApartmentController::class, 'updateReview']);
-        Route::delete('/delete/{id}', [ApartmentController::class, 'deleteReview']);
+        Route::post('/create/{apartment}', [ReviewController::class, 'createReview']);
+        Route::get('/list', [ReviewController::class, 'myReviews']);
+        Route::patch('/update/{review}', [ReviewController::class, 'updateReview']);
+        Route::delete('/delete/{review}', [ReviewController::class, 'deleteReview']);
     });
 });
 
@@ -111,13 +114,13 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
     });
 
     Route::prefix("owner")->middleware("role:owner")->group(function () {
-        Route::patch("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
-        Route::patch("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
-        Route::get("/get-booking/{booking}", [BookingController::class], "ownerGetBooking");
-        Route::get("/get-update-request/{updateRequest}", [BookingController::class], "ownerGetUpdateRequest");
-        Route::get("/list-update-requests/{booking}", [BookingController::class], "ownerListUpdateRequests");
-        Route::put("/approve-update-request/{updateRequest}", [BookingController::class], "ownerApproveUpdateRequest");
-        Route::put("/reject-update-request/{updateRequest}", [BookingController::class], "ownerRejectUpdateRequest");
+        Route::put("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
+        Route::put("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
+        Route::get("/get-booking/{booking}", [BookingController::class, "ownerGetBooking"]);
+        Route::get("/get-update-request/{updateRequest}", [BookingController::class, "ownerGetUpdateRequest"]);
+        Route::get("/list-update-requests/{booking}", [BookingController::class, "ownerListUpdateRequests"]);
+        Route::put("/approve-update-request/{updateRequest}", [BookingController::class, "ownerApproveUpdateRequest"]);
+        Route::put("/reject-update-request/{updateRequest}", [BookingController::class, "ownerRejectUpdateRequest"]);
     });
 
     Route::prefix("admin")->middleware("role:admin")->group(function () {

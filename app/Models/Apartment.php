@@ -25,12 +25,10 @@ class Apartment extends Model
         'governorate',
         'latitude',
         'longitude',
-        'is_available',
         'status',
     ];
 
     protected $casts = [
-        'is_available' => 'boolean',
         'price_per_night' => 'decimal:2',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
@@ -64,12 +62,12 @@ class Apartment extends Model
     }
 
     public function getAverageRatingAttribute()
-{
-    return round(
-        $this->reviews()->avg('rating'),
-        1
-    );
-}
+    {
+        return round(
+            $this->reviews()->avg('rating'),
+            1
+        );
+    }
 
 
     public function resolveRouteBinding($value, $field = null)

@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
             [
                 'first_name' => 'Mohammed',
                 'last_name' => 'Ali',
-                'phone' => '+963992222222',
+                'phone' => '2',
                 'password' => Hash::make('owner123'),
                 'role' => 'owner',
                 'avatar' => null,
@@ -40,7 +40,7 @@ class UserSeeder extends Seeder
             [
                 'first_name' => 'Ahmad',
                 'last_name' => 'Hassan',
-                'phone' => '+963993333333',
+                'phone' => '3',
                 'password' => Hash::make('tenant123'),
                 'role' => 'tenant',
                 'avatar' => null,

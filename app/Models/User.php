@@ -48,6 +48,10 @@ class User extends Authenticatable
     {
         return $this->role == UserRole::ADMIN->value;
     }
+    public function isTenant()
+    {
+        return $this->role == UserRole::TENANT->value;
+    }
 
 
     public function resolveRouteBinding($value, $field = null)

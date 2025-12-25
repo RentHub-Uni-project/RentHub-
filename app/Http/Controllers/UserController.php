@@ -93,8 +93,8 @@ class UserController extends Controller
     {
         $validatedData = $request->validate([
             "phone" => "string|unique:users,phone",
-            "role" => Rule::enum(UserRole::class),
-            "status" => Rule::enum(UserStatus::class),
+            "role" => ['required', Rule::enum(UserRole::class)],
+            "status" => ['required', Rule::enum(UserStatus::class)],
             "first_name" => "string|max:50",
             "last_name" => "string|max:50",
             "password" => "min:8",

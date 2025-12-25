@@ -17,6 +17,31 @@ class BookingUpdateRequest extends Model
 
     public function isPending()
     {
-        return $this->status == BookingUpdateRequestStatus::PENDING;
+        return $this->status == BookingUpdateRequestStatus::PENDING->value;
+    }
+
+    public function isApparoved()
+    {
+        return $this->status == BookingUpdateRequestStatus::APPROVED->value;
+    }
+
+    public function isCancelled()
+    {
+        return $this->status == BookingUpdateRequestStatus::CANCELLED->value;
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $model = $this->where($field, $value)->first();
+
+        if (!$model) {
+            abort(response()->json([
+                'message' => 'update request not found',
+            ], 404));
+        }
+
+        return $model;
     }
 }

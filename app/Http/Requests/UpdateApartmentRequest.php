@@ -6,22 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateApartmentRequest extends FormRequest
 {
-    /**
-     */
-    public function authorize()
-    {
-        $user = $this->user();
-        $apartment = \App\Models\Apartment::find($this->route('id'));
-
-        if (!$apartment) {
-            return false;
-        }
-
-        return $user->role === 'admin' || $apartment->owner_id === $user->id;
-    }
-
-    /**
-     */
     public function rules()
     {
         return [

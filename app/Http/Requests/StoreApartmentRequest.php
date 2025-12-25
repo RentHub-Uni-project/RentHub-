@@ -7,15 +7,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreApartmentRequest extends FormRequest
 {
-    /**
-     */
-    public function authorize()
-    {
-        return $this->user()->role === 'owner';
-    }
-
-    /**
-     */
     public function rules()
     {
         return [
@@ -31,7 +22,4 @@ class StoreApartmentRequest extends FormRequest
             'longitude' => 'nullable|numeric|between:-180,180'
         ];
     }
-
-    /**
-     */
 }

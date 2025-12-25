@@ -38,13 +38,10 @@ class ApartmentController extends Controller
         $query->when($request->filled('min_price'), fn($q) => $q->where('price_per_night', '>=', $request->min_price));
         $query->when($request->filled('max_price'), fn($q) => $q->where('price_per_night', '<=', $request->max_price));
 
-        $query->when($request->has('is_available'), function ($q) use ($request) {
-            return $q->where('is_available', filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN));
-        });
 
         // sorting: default to approved first, then by specified column
 
-        $query->orderBy($request->get('sort_by'), $request->get('sort_order', 'desc'));
+        $query->orderBy("created_at", 'asc');
 
         $result = $query->paginate($request->get('per_page', 15));
 
@@ -92,7 +89,8 @@ class ApartmentController extends Controller
     public function myApartments(Request $request)
     {
         $user = $request->user();
-        return Apartment::where('owner_id', $user->id)->get();
+        $apartments = Apartment::where('owner_id', $user->id)->get();
+        return response()->json(["message" => "success", "apartments" => $apartments]);
     }
 
     public function store(StoreApartmentRequest $request)
@@ -100,7 +98,9 @@ class ApartmentController extends Controller
         $data = $request->validated();
         $data['owner_id'] = $request->user()->id;
         $data['status'] = 'pending';
-        return Apartment::create($data);
+
+        $apartments = Apartment::create($data);
+        return response()->json(["message" => "apartment created successfully.", "apartment" => new ApartmentResource($apartments)]);
     }
 
     public function update(UpdateApartmentRequest $request, Apartment $apartment)
