@@ -3,6 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -30,31 +33,27 @@ class User extends Authenticatable
 
     public function isRejected()
     {
-        return $this->status == "rejected";
+        return $this->status == UserStatus::REJECTED->value;
     }
     public function isApproved()
     {
-        return $this->status == "approved";
+        return $this->status == UserStatus::APPROVED->value;
     }
     public function isPending()
     {
-        return $this->status == "pending";
+        return $this->status == UserStatus::PENDING->value;
     }
 
-    public function serialize()
+    public function isAdmin()
     {
-        return [
-            "id" => $this->id,
-            "first_name" => $this->first_name,
-            "last_name" => $this->last_name,
-            "status" => $this->status,
-            "phone" => $this->phone,
-            "role" => $this->role,
-            "birth_date" => $this->birth_date,
-            "id_card" => $this->id_card,
-            "avatar" => $this->avatar
-        ];
+        return $this->role == UserRole::ADMIN->value;
     }
+    public function isTenant()
+    {
+        return $this->role == UserRole::TENANT->value;
+    }
+
+
     public function resolveRouteBinding($value, $field = null)
     {
         $field = $field ?: $this->getRouteKeyName();

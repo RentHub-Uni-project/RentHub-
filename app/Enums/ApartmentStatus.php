@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 
-enum BookingStatus: string
+enum ApartmentStatus: string
 {
     case PENDING = "pending";
     case APPROVED = "approved";

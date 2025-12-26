@@ -42,4 +42,19 @@ class Review extends Model
     {
         return $this->belongsTo(User::class, 'tenant_id');
     }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $model = $this->where($field, $value)->first();
+
+        if (!$model) {
+            abort(response()->json([
+                'message' => 'review not found',
+            ], 404));
+        }
+
+        return $model;
+    }
 }

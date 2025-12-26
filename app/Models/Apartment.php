@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ApartmentStatus;
+use App\Enums\BookingStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,22 +19,17 @@ class Apartment extends Model
         'description',
         'address',
         'price_per_night',
-        'price_per_month',
         'max_guests',
         'bedrooms',
         'bathrooms',
-        'governorate_id',
-        'city',
+        'governorate',
         'latitude',
         'longitude',
-        'is_available',
         'status',
     ];
 
     protected $casts = [
-        'is_available' => 'boolean',
         'price_per_night' => 'decimal:2',
-        'price_per_month' => 'decimal:2',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
     ];
@@ -66,12 +63,12 @@ class Apartment extends Model
     }
 
     public function getAverageRatingAttribute()
-{
-    return round(
-        $this->reviews()->avg('rating'),
-        1
-    );
-}
+    {
+        return round(
+            $this->reviews()->avg('rating'),
+            1
+        );
+    }
 
 
     public function resolveRouteBinding($value, $field = null)
@@ -91,14 +88,38 @@ class Apartment extends Model
 
     public function isPending()
     {
-        return $this->status == "pending";
+        return $this->status == ApartmentStatus::PENDING->value;
     }
     public function isRejected()
     {
-        return $this->status == "rejected";
+        return $this->status == ApartmentStatus::REJECTED->value;
     }
     public function isApproved()
     {
-        return $this->status == "approved";
+        return $this->status == ApartmentStatus::APPROVED->value;
+    }
+
+    public function checkAvailability($start_date, $end_date)
+    {
+        $overlap = Booking::where('apartment_id', $this->id)
+            ->where('status', BookingStatus::APPROVED)
+            ->where(function ($query) use ($start_date, $end_date) {
+                $query->whereBetween('start_date', [$start_date, $end_date])
+                    ->orWhereBetween('end_date', [$start_date, $end_date])
+                    ->orWhere(function ($q) use ($start_date, $end_date) {
+                        $q->where('start_date', '<', $start_date)
+                            ->where('end_date', '>', $end_date);
+                    });
+            })
+            ->exists();
+
+        if ($overlap) {
+            return [
+                'available' => false,
+                'message' => 'Selected dates are not available'
+            ];
+        }
+
+        return ['available' => true];
     }
 }

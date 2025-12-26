@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -58,7 +59,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'Registration successful. Waiting for admin approval.',
-                'user' => $user->serialize()
+                'user' => new UserResource($user)
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -106,7 +107,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Login successful',
                 'token' => $token,
-                'user' => $user->serialize()
+                'user' => new UserResource($user)
             ]);
         } catch (\Exception $e) {
             return response()->json([

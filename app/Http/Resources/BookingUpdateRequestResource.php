@@ -18,7 +18,7 @@ class BookingUpdateRequestResource extends JsonResource
             "requested_start_date" => $this->requested_start_date,
             "requested_end_date" => $this->requested_end_date,
             "requested_tenant_notes" => $this->requested_tenant_notes,
-            "request_number_of_guests" => $this->request_number_of_guests,
+            "requested_number_of_guests" => $this->requested_number_of_guests,
             "status" => $this->status,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
