@@ -47,7 +47,8 @@ class Apartment extends Model
 
     public function images()
     {
-        return $this->hasMany(ApartmentImage::class, 'apartment_id');
+        return $this->hasMany(ApartmentImage::class, 'apartment_id')
+        ->orderBy('display_order');
     }
 
     public function bookings()

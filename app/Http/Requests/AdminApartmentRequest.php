@@ -30,8 +30,9 @@ class AdminApartmentRequest extends FormRequest
             'city' => 'required|string|max:100',
             'status' => 'required|in:pending,approved,rejected',
             'description' => 'nullable|string',
-            'amenities' => 'nullable|array',
-            'amenities.*' => 'string'
+            'images' => 'nullable|array|max:10',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+
         ];
     }
 

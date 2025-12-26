@@ -25,11 +25,12 @@ class StoreApartmentRequest extends FormRequest
             'max_guests' => 'required|integer|min:1',
             'bedrooms' => 'required|integer|min:0',
             'bathrooms' => 'required|integer|min:0',
-            'governorate_id' => 'required|exists:governorates,id',
             'city' => 'required|string|max:100',
             'description' => 'nullable|string',
-            'amenities' => 'nullable|array',
-            'amenities.*' => 'string'
+
+
+            'images' => 'required|array|max:10',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
 

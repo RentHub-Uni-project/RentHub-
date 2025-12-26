@@ -41,10 +41,8 @@ Route::prefix("users")->middleware(['auth:sanctum'])->group(function () {
 // Apartments
 Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
     // General APIs
-    Route::get('/list', [ApartmentController::class, 'index']);
+    Route::get('/list', [ApartmentController::class, 'index']); // list of apartment with filter and searsh 
     Route::get('/get/{id}', [ApartmentController::class, 'show']);
-    Route::get('/search', [ApartmentController::class, 'search']); // Search by address
-    Route::get('/filter', [ApartmentController::class, 'filter']);      // Filter apartments
     Route::get('/list-reviews/{id}', [ReviewController::class, 'reviews']); // Show ratings
 
     // Admin APIs

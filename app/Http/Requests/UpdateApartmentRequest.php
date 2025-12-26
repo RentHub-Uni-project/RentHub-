@@ -20,8 +20,7 @@ class UpdateApartmentRequest extends FormRequest
         return $user->role === 'admin' || $apartment->owner_id === $user->id;
     }
 
-    /**
-     */
+
     public function rules()
     {
         return [
@@ -32,15 +31,15 @@ class UpdateApartmentRequest extends FormRequest
             'max_guests' => 'sometimes|integer|min:1',
             'bedrooms' => 'sometimes|integer|min:0',
             'bathrooms' => 'sometimes|integer|min:0',
-            'governorate_id' => 'sometimes|exists:governorates,id',
             'city' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
-            'amenities' => 'nullable|array',
-            'amenities.*' => 'string',
-            'status' => 'sometimes|in:pending,approved,rejected'
+            'status' => 'sometimes|in:pending,approved,rejected',
+
+            'images' => 'nullable|array|max:10',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+
         ];
     }
 
-    /**
-     */
+
 }

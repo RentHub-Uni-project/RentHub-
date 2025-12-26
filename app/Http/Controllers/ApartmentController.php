@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Apartment;
-use App\Models\Review;
-use App\Models\FavoriteApartment;
+use App\Models\ApartmentImage;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreApartmentRequest;
 use App\Http\Requests\UpdateApartmentRequest;
 use App\Http\Requests\AdminApartmentRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+
+
 
 class ApartmentController extends Controller
 {
@@ -17,68 +20,72 @@ class ApartmentController extends Controller
     // ======================
 
     // List all approved apartments
-    public function index(Request $request)
+
+    public function index(Request $request)     // GET /apartments?keyword=studio&city=Berlin&min_price=50&max_price=200&per_page=10
     {
-        $query = Apartment::query();
+        $query = Apartment::query()
+            ->where('status', 'approved')
+            ->with('images'); // load apartment images
 
-        // show approved apartments first
-        $query->where('status', 'approved');
+        /*  Search by keyword (title + address) */
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
 
-
-
-        $query->when($request->filled('title'), fn($q) => $q->where('title', 'LIKE', '%' . $request->title . '%'));
-        $query->when($request->filled('city'), fn($q) => $q->where('city', $request->city));
-
-        // price range
-        $query->when($request->filled('min_price'), fn($q) => $q->where('price_per_night', '>=', $request->min_price));
-        $query->when($request->filled('max_price'), fn($q) => $q->where('price_per_night', '<=', $request->max_price));
-
-        $query->when($request->has('is_available'), function ($q) use ($request) {
-            return $q->where('is_available', filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN));
-        });
-
-        // sorting: default to approved first, then by specified column
-        if (!$request->has('sort_by')) {
-            $query->orderByRaw("FIELD(status, 'approved', 'pending', 'rejected')")
-                ->orderBy('created_at', 'desc');
-        } else {
-            $query->orderBy($request->get('sort_by'), $request->get('sort_order', 'desc'));
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%{$keyword}%")
+                    ->orWhere('address', 'like', "%{$keyword}%");
+            });
         }
 
-        $result = $query->paginate($request->get('per_page', 15));
+        /*  Price filter */
+        if ($request->filled('min_price')) {
+            $query->where('price_per_night', '>=', $request->min_price);
+        }
 
-        return response()->json(["message" => "success", "data" => $result]);
+        if ($request->filled('max_price')) {
+            $query->where('price_per_night', '<=', $request->max_price);
+        }
+
+        /*  Guests filter */
+        if ($request->filled('guests')) {
+            $query->where('max_guests', '>=', $request->guests);
+        }
+
+        /*  Bedrooms */
+        if ($request->filled('bedrooms')) {
+            $query->where('bedrooms', $request->bedrooms);
+        }
+
+        /*  Bathrooms */
+        if ($request->filled('bathrooms')) {
+            $query->where('bathrooms', $request->bathrooms);
+        }
+
+        /*  City */
+        if ($request->filled('city')) {
+            $query->where('city', $request->city);
+        }
+
+        /*  Default sorting (latest approved apartments first) */
+        $query->orderBy('average_rating', 'desc');
+
+        /*  Pagination */
+        $apartments = $query->paginate(
+            $request->get('per_page', 15)
+        );
+
+        return response()->json([
+            'message' => 'success',
+            'data' => $apartments
+        ]);
     }
+
 
     // Show details of a specific apartment
     public function show($id)
     {
         $apartment = Apartment::where('status', 'approved')->findOrFail($id);
         return response()->json(["message" => "apartment found successfully.", "apartment" => $apartment]);
-    }
-
-    // Search apartments by address keyword
-    public function search(Request $request)
-    {
-        $keyword = $request->input('keyword', '');
-        return Apartment::where('status', 'approved')
-            ->where(['address', 'title'], 'like', "%{$keyword}%")
-            ->get();
-    }
-
-    // Filter apartments by various fields
-    public function filter(Request $request)
-    {
-        $query = Apartment::query()->where('status', 'approved');
-
-        if ($request->has('min_price')) $query->where('price_per_night', '>=', $request->min_price);
-        if ($request->has('max_price')) $query->where('price_per_night', '<=', $request->max_price);
-        if ($request->has('guests')) $query->where('max_guests', '>=', $request->guests);
-        if ($request->has('bedrooms')) $query->where('bedrooms', $request->bedrooms);
-        if ($request->has('bathrooms')) $query->where('bathrooms', $request->bathrooms);
-        if ($request->has('city')) $query->where('city', $request->city);
-
-        return $query->get();
     }
 
     // ======================
@@ -91,34 +98,172 @@ class ApartmentController extends Controller
         return Apartment::where('owner_id', $user->id)->get();
     }
 
+
     public function store(StoreApartmentRequest $request)
     {
-        $data = $request->validated();
-        $data['owner_id'] = $request->user()->id;
-        $data['status'] = 'pending';
-        return Apartment::create($data);
+        DB::beginTransaction();
+
+        try {
+            $data = $request->validated();
+            $data['owner_id'] = $request->user()->id;
+            $data['status'] = 'pending';
+
+            $apartment = Apartment::create($data);
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $path = $image->store("apartments/{$apartment->id}", 'public');
+
+                    ApartmentImage::create([
+                        'apartment_id' => $apartment->id,
+                        'image_url' => $path,
+                        'display_order' => $index + 1,
+                        'is_main' => $index === 0,
+                    ]);
+                }
+            }
+
+            if ($request->filled('is_main')) {
+                $mainImageId = $request->is_main;
+
+                ApartmentImage::where('apartment_id', $apartment->id)
+                    ->update(['is_main' => false]);
+
+                $mainImage = ApartmentImage::find($mainImageId);
+                if ($mainImage && $mainImage->apartment_id == $apartment->id) {
+                    $mainImage->update(['is_main' => true]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Apartment created successfully',
+                'apartment' => $apartment,
+                'images' => $apartment->images()->get()
+            ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create apartment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+
+
 
     public function update(UpdateApartmentRequest $request, $id)
     {
         $user = $request->user();
+
         if ($user->role === 'owner') {
             $apartment = Apartment::where('owner_id', $user->id)->findOrFail($id);
         } else {
             $apartment = Apartment::findOrFail($id);
         }
 
-        $apartment->update($request->validated());
-        return $apartment;
+        DB::beginTransaction();
+
+        try {
+            $apartment->update($request->validated());
+
+            if ($request->filled('delete_images')) {
+                foreach ($request->delete_images as $imgId) {
+                    $img = ApartmentImage::find($imgId);
+                    if ($img && $img->apartment_id == $apartment->id) {
+                        if (Storage::disk('public')->exists($img->image_url)) {
+                            Storage::disk('public')->delete($img->image_url);
+                        }
+                        $img->delete();
+                    }
+                }
+            }
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store("apartments/{$apartment->id}", 'public');
+
+                    ApartmentImage::create([
+                        'apartment_id' => $apartment->id,
+                        'image_url' => $path,
+                        'display_order' => ApartmentImage::where('apartment_id', $apartment->id)->max('display_order') + 1,
+                        'is_main' => false,
+                    ]);
+                }
+            }
+
+            if ($request->filled('is_main')) {
+                $mainImageId = $request->is_main;
+
+                ApartmentImage::where('apartment_id', $apartment->id)
+                    ->update(['is_main' => false]);
+
+                $mainImage = ApartmentImage::find($mainImageId);
+                if ($mainImage && $mainImage->apartment_id == $apartment->id) {
+                    $mainImage->update(['is_main' => true]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Apartment updated successfully',
+                'apartment' => $apartment,
+                'images' => $apartment->images()->get()
+            ], 200);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update apartment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+
 
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
-        $apartment = Apartment::where('owner_id', $user->id)->findOrFail($id);
-        $apartment->delete();
-        return response()->json(['message' => 'Deleted']);
+
+        if ($user->role === 'owner') {
+            $apartment = Apartment::where('owner_id', $user->id)->findOrFail($id);
+        } else {
+            $apartment = Apartment::findOrFail($id);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($apartment->images as $image) {
+                if (Storage::disk('public')->exists($image->image_url)) {
+                    Storage::disk('public')->delete($image->image_url);
+                }
+            }
+
+            $apartment->images()->delete();
+
+            $apartment->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Apartment and its images deleted successfully'
+            ], 200);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete apartment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
     // ======================
     //  ADMIN - Admin APIs
@@ -131,14 +276,76 @@ class ApartmentController extends Controller
 
     public function adminStore(AdminApartmentRequest $request)
     {
-        return Apartment::create($request->validated());
+        DB::beginTransaction();
+
+        try {
+            $data = $request->validated();
+
+            $data['owner_id'] = $request->user()->id;
+
+            $apartment = Apartment::create($data);
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $path = $image->store("apartments/{$apartment->id}", 'public');
+
+                    ApartmentImage::create([
+                        'apartment_id' => $apartment->id,
+                        'image_url' => $path,
+                        'display_order' => $index + 1,
+                        'is_main' => $index === 0,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Apartment created successfully',
+                'apartment' => $apartment
+            ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create apartment'
+            ], 500);
+        }
     }
 
     public function adminUpdate(AdminApartmentRequest $request, $id)
     {
         $apartment = Apartment::findOrFail($id);
-        $apartment->update($request->validated());
-        return $apartment;
+
+        DB::beginTransaction();
+        try {
+            $apartment->update($request->validated());
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store("apartments/{$apartment->id}", 'public');
+
+                    ApartmentImage::create([
+                        'apartment_id' => $apartment->id,
+                        'image_url' => $path,
+                        'display_order' => $apartment->images()->count() + 1,
+                        'is_main' => false,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Apartment updated successfully',
+                'apartment' => $apartment,
+                'images' => $apartment->images()->get()
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update apartment', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function adminDelete($id)
