@@ -61,9 +61,9 @@ class ApartmentController extends Controller
             $query->where('bathrooms', $request->bathrooms);
         }
 
-        /*  City */
-        if ($request->filled('city')) {
-            $query->where('city', $request->city);
+        /*  governorate */
+        if ($request->filled('governorate')) {
+            $query->where('governorate', $request->governorate);
         }
 
         /*  Default sorting (latest approved apartments first) */
