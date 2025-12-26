@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\SyrianGovernorates;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateApartmentRequest extends FormRequest
@@ -32,7 +33,7 @@ class UpdateApartmentRequest extends FormRequest
             'max_guests' => 'sometimes|integer|min:1',
             'bedrooms' => 'sometimes|integer|min:0',
             'bathrooms' => 'sometimes|integer|min:0',
-            'city' => 'sometimes|string|max:100',
+            'governorate' => 'required|in:' . implode(',', SyrianGovernorates::all()),
             'description' => 'nullable|string',
             'status' => 'sometimes|in:pending,approved,rejected',
 
@@ -41,6 +42,4 @@ class UpdateApartmentRequest extends FormRequest
 
         ];
     }
-
-
 }
