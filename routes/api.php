@@ -31,10 +31,10 @@ Route::prefix("users")->middleware(['auth:sanctum'])->group(function () {
 
     // Admin APIs
     Route::prefix("admin")->middleware("role:admin")->group(function () {
-        Route::post('/create', [UserController::class, "createUserAdmin"]);
-        Route::get('/list', [UserController::class, "listUsersAdmin"]);
-        Route::patch('/update/{user}', [UserController::class, "updateUserAdmin"]);
-        Route::delete('/delete/{user}', [UserController::class, "deleteUserAdmin"]);
+        Route::post('/create', [UserController::class, "adminCreateUser"]);
+        Route::get('/list', [UserController::class, "adminListUsers"]);
+        Route::patch('/update/{user}', [UserController::class, "adminUpdateUser"]);
+        Route::delete('/delete/{user}', [UserController::class, "adminDeleteUser"]);
     });
 });
 
@@ -98,20 +98,20 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
         Route::get("/get/{booking}", [BookingController::class, "getBooking"]);
         Route::get("/list-my-bookings", [BookingController::class, "listMyBookings"]);
         Route::post("/create/{apartment}", [BookingController::class, "createBooking"]);
-        Route::delete("/delete/{booking}", [BookingController::class, "deleteBooking"]);
+        Route::delete("/cancel/{booking}", [BookingController::class, "cancelBooking"]);
         Route::post('/creat-update-request/{booking}', [BookingController::class, "createUpdateRequest"]);
         Route::put('/edit-update-request/{updateRequest}', [BookingController::class, "editUpdateRequest"]);
-        Route::delete('/delete-update-request/{updateRequest}', [BookingController::class, "deleteUpdateRequest"]);
+        Route::delete('/cancel-update-request/{updateRequest}', [BookingController::class, "cancelUpdateRequest"]);
     });
 
     Route::prefix("owner")->middleware("role:owner")->group(function () {
         Route::patch("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
         Route::patch("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
-        Route::get("/get-booking/{booking}", [BookingController::class], "ownerGetBooking");
-        Route::get("/get-update-request/{updateRequest}", [BookingController::class], "ownerGetUpdateRequest");
-        Route::get("/list-update-requests/{booking}", [BookingController::class], "ownerListUpdateRequests");
-        Route::put("/approve-update-request/{updateRequest}", [BookingController::class], "ownerApproveUpdateRequest");
-        Route::put("/reject-update-request/{updateRequest}", [BookingController::class], "ownerRejectUpdateRequest");
+        Route::get("/get-booking/{booking}", [BookingController::class, "ownerGetBooking"]);
+        Route::get("/get-update-request/{updateRequest}", [BookingController::class, "ownerGetUpdateRequest"]);
+        Route::get("/list-update-requests/{booking}", [BookingController::class, "ownerListUpdateRequests"]);
+        Route::put("/approve-update-request/{updateRequest}", [BookingController::class, "ownerApproveUpdateRequest"]);
+        Route::put("/reject-update-request/{updateRequest}", [BookingController::class, "ownerRejectUpdateRequest"]);
     });
 
     Route::prefix("admin")->middleware("role:admin")->group(function () {
