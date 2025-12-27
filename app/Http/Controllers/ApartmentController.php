@@ -66,6 +66,16 @@ class ApartmentController extends Controller
             $query->where('governorate', $request->governorate);
         }
 
+        // Add average rating as subquery
+        $query->addSelect([
+            '*',
+            DB::raw('(
+            SELECT AVG(rating)
+            FROM reviews
+            WHERE reviews.apartment_id = apartments.id
+        ) as average_rating')
+        ]);
+
         /*  Default sorting (latest approved apartments first) */
         $query->orderBy('average_rating', 'desc');
 
