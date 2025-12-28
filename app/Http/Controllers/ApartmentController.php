@@ -258,12 +258,12 @@ class ApartmentController extends Controller
 
             DB::commit();
 
-        return response()->json([
-            'message' => 'Apartment deleted successfully'
-        ], 200);
+            return response()->json([
+                'message' => 'Apartment deleted successfully'
+            ], 200);
 
-    } catch (\Throwable $e) {
-        DB::rollBack();
+        } catch (\Throwable $e) {
+            DB::rollBack();
 
             return response()->json([
                 'message' => 'Failed to delete apartment',
@@ -302,12 +302,26 @@ class ApartmentController extends Controller
     public function approve(Apartment $apartment)
     {
         $apartment->update(['status' => 'approved']);
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'apartment_approved',
+            'Apartment approved',
+            'Your apartment listing has been approved and is now visible to tenants.',
+            $apartment->id
+        );
         return response()->json(['message' => 'Apartment approved', "apartment" => new ApartmentResource($apartment)]);
     }
 
     public function reject(Apartment $apartment)
     {
         $apartment->update(['status' => 'rejected']);
-        return response()->json(['message' => 'Apartment rejected',  "apartment" => new ApartmentResource($apartment)]);
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'apartment_rejected',
+            'Apartment rejected',
+            'Your apartment listing has been rejected. Please review the details and submit it again.',
+            $apartment->id
+        );
+        return response()->json(['message' => 'Apartment rejected', "apartment" => new ApartmentResource($apartment)]);
     }
 }
