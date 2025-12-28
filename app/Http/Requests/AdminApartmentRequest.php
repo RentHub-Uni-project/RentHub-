@@ -18,7 +18,6 @@ class AdminApartmentRequest extends FormRequest
             'bedrooms' => 'required|integer|min:0',
             'bathrooms' => 'required|integer|min:0',
             'governorate' => 'required|in:' . implode(',', SyrianGovernorates::all()),
-            'status' => 'required|in:pending,approved,rejected',
             'description' => 'nullable|string',
             'images' => 'nullable|array|max:10',
             'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',

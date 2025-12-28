@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ApartmentStatus;
 use App\Enums\BookingStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +24,6 @@ class Apartment extends Model
         'governorate',
         'latitude',
         'longitude',
-        'status',
     ];
 
     protected $casts = [
@@ -45,7 +43,7 @@ class Apartment extends Model
     public function images()
     {
         return $this->hasMany(ApartmentImage::class, 'apartment_id')
-        ->orderBy('display_order');
+            ->orderBy('display_order');
     }
 
     public function bookings()
@@ -84,19 +82,6 @@ class Apartment extends Model
         }
 
         return $model;
-    }
-
-    public function isPending()
-    {
-        return $this->status == ApartmentStatus::PENDING->value;
-    }
-    public function isRejected()
-    {
-        return $this->status == ApartmentStatus::REJECTED->value;
-    }
-    public function isApproved()
-    {
-        return $this->status == ApartmentStatus::APPROVED->value;
     }
 
     public function checkAvailability($start_date, $end_date)

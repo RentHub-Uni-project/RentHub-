@@ -19,12 +19,11 @@ class ApartmentController extends Controller
     //  ALL USERS - Public APIs
     // ======================
 
-    // List all approved apartments
+    // List all apartments
 
     public function index(Request $request)     // GET /apartments?keyword=studio&city=Berlin&min_price=50&max_price=200&per_page=10
     {
         $query = Apartment::query()
-            ->where('status', 'approved')
             ->with('images'); // load apartment images
 
         /*  Search by keyword (title + address) */
@@ -76,7 +75,6 @@ class ApartmentController extends Controller
         ) as average_rating')
         ]);
 
-        /*  Default sorting (latest approved apartments first) */
         $query->orderBy('average_rating', 'desc');
 
         /*  Pagination */
@@ -95,9 +93,6 @@ class ApartmentController extends Controller
     public function show(Request $request, Apartment $apartment)
     {
         $user = $request->user();
-        if (!$user->isAdmin() && !$apartment->isApproved()) {
-            return response()->json(["message" => "this appartment is not approved, you can't see its details."], 403);
-        }
         return response()->json(["message" => "apartment found successfully.", "apartment" => $apartment]);
     }
 
@@ -120,7 +115,6 @@ class ApartmentController extends Controller
         try {
             $data = $request->validated();
             $data['owner_id'] = $request->user()->id;
-            $data['status'] = 'pending';
 
             $apartment = Apartment::create($data);
 
@@ -233,48 +227,47 @@ class ApartmentController extends Controller
 
     // delete apartment from admin or owner
     public function destroy(Request $request, Apartment $apartment)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    // Authorization: owner or admin only
-    if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
-        return response()->json([
-            'message' => 'You are not authorized to delete this apartment'
-        ], 403);
-    }
-
-    DB::beginTransaction();
-
-    try {
-        // Delete apartment images (files + DB records)
-        foreach ($apartment->images as $image) {
-            if (Storage::disk('public')->exists($image->image_url)) {
-                Storage::disk('public')->delete($image->image_url);
-            }
-            $image->delete();
+        // Authorization: owner or admin only
+        if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
+            return response()->json([
+                'message' => 'You are not authorized to delete this apartment'
+            ], 403);
         }
 
-        // Delete apartment folder (optional but recommended)
-        Storage::disk('public')->deleteDirectory("apartments/{$apartment->id}");
+        DB::beginTransaction();
 
-        // Delete apartment
-        $apartment->delete();
+        try {
+            // Delete apartment images (files + DB records)
+            foreach ($apartment->images as $image) {
+                if (Storage::disk('public')->exists($image->image_url)) {
+                    Storage::disk('public')->delete($image->image_url);
+                }
+                $image->delete();
+            }
 
-        DB::commit();
+            // Delete apartment folder (optional but recommended)
+            Storage::disk('public')->deleteDirectory("apartments/{$apartment->id}");
 
-        return response()->json([
-            'message' => 'Apartment deleted successfully'
-        ], 200);
+            // Delete apartment
+            $apartment->delete();
 
-    } catch (\Throwable $e) {
-        DB::rollBack();
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Failed to delete apartment',
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json([
+                'message' => 'Apartment deleted successfully'
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to delete apartment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
 
@@ -297,21 +290,5 @@ class ApartmentController extends Controller
     {
         $apartment->update($request->validated());
         return response()->json(["message" => "apartment updated successfully.", "apartment" => new ApartmentResource($apartment)]);
-    }
-
-    // ======================
-    //  ADMIN Approval
-    // ======================
-
-    public function approve(Apartment $apartment)
-    {
-        $apartment->update(['status' => 'approved']);
-        return response()->json(['message' => 'Apartment approved', "apartment" => new ApartmentResource($apartment)]);
-    }
-
-    public function reject(Apartment $apartment)
-    {
-        $apartment->update(['status' => 'rejected']);
-        return response()->json(['message' => 'Apartment rejected',  "apartment" => new ApartmentResource($apartment)]);
     }
 }
