@@ -27,7 +27,6 @@ class AdminUpdateApartmentRequest extends FormRequest
             'bedrooms' => 'sometimes|integer|min:0',
             'bathrooms' => 'sometimes|integer|min:0',
             'governorate' => 'sometimes|in:' . implode(',', SyrianGovernorates::all()),
-            'status' => 'sometimes|in:pending,approved,rejected',
             'description' => 'sometimes|nullable|string',
             'latitude' => 'sometimes|nullable|numeric|between:-90,90',
             'longitude' => 'sometimes|nullable|numeric|between:-180,180'

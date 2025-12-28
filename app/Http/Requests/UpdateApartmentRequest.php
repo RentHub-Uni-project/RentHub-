@@ -35,7 +35,6 @@ class UpdateApartmentRequest extends FormRequest
             'bathrooms' => 'sometimes|integer|min:0',
             'governorate' => 'required|in:' . implode(',', SyrianGovernorates::all()),
             'description' => 'nullable|string',
-            'status' => 'sometimes|in:pending,approved,rejected',
 
             'images' => 'nullable|array|max:10',
             'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',

@@ -21,12 +21,11 @@ class ApartmentController extends Controller
     //  ALL USERS - Public APIs
     // ======================
 
-    // List all approved apartments
+    // List all apartments
 
     public function index(Request $request)     // GET /apartments?keyword=studio&city=Berlin&min_price=50&max_price=200&per_page=10
     {
         $query = Apartment::query()
-            ->where('status', 'approved')
             ->with('images'); // load apartment images
 
         /*  Search by keyword (title + address) */
@@ -78,7 +77,6 @@ class ApartmentController extends Controller
         ) as average_rating')
         ]);
 
-        /*  Default sorting (latest approved apartments first) */
         $query->orderBy('average_rating', 'desc');
 
         /*  Pagination */
@@ -97,9 +95,6 @@ class ApartmentController extends Controller
     public function show(Request $request, Apartment $apartment)
     {
         $user = $request->user();
-        if (!$user->isAdmin() && !$apartment->isApproved()) {
-            return response()->json(["message" => "this appartment is not approved, you can't see its details."], 403);
-        }
         return response()->json(["message" => "apartment found successfully.", "apartment" => $apartment]);
     }
 
@@ -122,7 +117,6 @@ class ApartmentController extends Controller
         try {
             $data = $request->validated();
             $data['owner_id'] = $request->user()->id;
-            $data['status'] = 'pending';
 
             $apartment = Apartment::create($data);
 
@@ -264,12 +258,12 @@ class ApartmentController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'message' => 'Apartment deleted successfully'
-            ], 200);
+        return response()->json([
+            'message' => 'Apartment deleted successfully'
+        ], 200);
 
-        } catch (\Throwable $e) {
-            DB::rollBack();
+    } catch (\Throwable $e) {
+        DB::rollBack();
 
             return response()->json([
                 'message' => 'Failed to delete apartment',
@@ -308,26 +302,12 @@ class ApartmentController extends Controller
     public function approve(Apartment $apartment)
     {
         $apartment->update(['status' => 'approved']);
-        NotificationService::createNotification(
-            $apartment->owner_id,
-            'apartment_approved',
-            'Apartment approved',
-            'Your apartment listing has been approved and is now visible to tenants.',
-            $apartment->id
-        );
         return response()->json(['message' => 'Apartment approved', "apartment" => new ApartmentResource($apartment)]);
     }
 
     public function reject(Apartment $apartment)
     {
         $apartment->update(['status' => 'rejected']);
-        NotificationService::createNotification(
-            $apartment->owner_id,
-            'apartment_rejected',
-            'Apartment rejected',
-            'Your apartment listing has been rejected. Please review the details and submit it again.',
-            $apartment->id
-        );
-        return response()->json(['message' => 'Apartment rejected', "apartment" => new ApartmentResource($apartment)]);
+        return response()->json(['message' => 'Apartment rejected',  "apartment" => new ApartmentResource($apartment)]);
     }
 }
