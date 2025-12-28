@@ -51,7 +51,7 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
         Route::get('/list', [ApartmentController::class, 'adminIndex']);
         Route::post('/create', [ApartmentController::class, 'adminStore']);
         Route::put('/update/{apartment}', [ApartmentController::class, 'adminUpdate']);
-        Route::delete('/delete/{apartment}', [ApartmentController::class, 'adminDelete']);
+        Route::delete('/delete/{apartment}', [ApartmentController::class, 'destroy']);
 
         Route::post('/approve/{apartment}', [ApartmentController::class, 'approve']);
         Route::post('/reject/{apartment}', [ApartmentController::class, 'reject']);

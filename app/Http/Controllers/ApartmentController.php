@@ -230,15 +230,52 @@ class ApartmentController extends Controller
         }
     }
 
+
+    // delete apartment from admin or owner
     public function destroy(Request $request, Apartment $apartment)
-    {
-        $user = $request->user();
-        if ($apartment->owner_id != $user->id) {
-            return response()->json(["message" => "you are no the owner of the provided apartment."], 403);
-        }
-        $apartment->delete();
-        return response()->json(['message' => 'Deleted']);
+{
+    $user = $request->user();
+
+    // Authorization: owner or admin only
+    if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
+        return response()->json([
+            'message' => 'You are not authorized to delete this apartment'
+        ], 403);
     }
+
+    DB::beginTransaction();
+
+    try {
+        // Delete apartment images (files + DB records)
+        foreach ($apartment->images as $image) {
+            if (Storage::disk('public')->exists($image->image_url)) {
+                Storage::disk('public')->delete($image->image_url);
+            }
+            $image->delete();
+        }
+
+        // Delete apartment folder (optional but recommended)
+        Storage::disk('public')->deleteDirectory("apartments/{$apartment->id}");
+
+        // Delete apartment
+        $apartment->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Apartment deleted successfully'
+        ], 200);
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'message' => 'Failed to delete apartment',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 
 
     // ======================
@@ -260,12 +297,6 @@ class ApartmentController extends Controller
     {
         $apartment->update($request->validated());
         return response()->json(["message" => "apartment updated successfully.", "apartment" => new ApartmentResource($apartment)]);
-    }
-
-    public function adminDelete(Request $request, Apartment $apartment)
-    {
-        $apartment->delete();
-        return response()->json(['message' => 'apartment deleted successfully.'], 204);
     }
 
     // ======================
