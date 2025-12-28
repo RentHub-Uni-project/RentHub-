@@ -16,12 +16,16 @@ use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\NotificationService;
+
 
 class BookingController extends Controller
 {
     // =======================
     //          TENANT
     // =======================
+
+
     public function createBooking(Request $request, Apartment $apartment)
     {
         $data = $request->validate([
@@ -48,7 +52,13 @@ class BookingController extends Controller
             "status" => BookingStatus::PENDING,
             "total_price" => $total_price
         ]);
-
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'booking_created',
+            'New Booking Created',
+            "You have a new booking from {$user->first_name} from {$booking->start_date} to {$booking->end_date}",
+            $booking->id
+        );
         return response()->json([
             "message" => "booking created successfully",
             "booking" => new BookingResource($booking)
@@ -64,6 +74,14 @@ class BookingController extends Controller
             ], 403);
         }
         $booking->update(["status" => BookingStatus::CANCELLED]);
+
+        NotificationService::createNotification(
+            $booking->apartment->owner_id,
+            'booking_cancelled',
+            'Booking Cancelled',
+            "{$user->first_name} has cancelled the booking for {$booking->apartment->title} from {$booking->start_date} to {$booking->end_date}.",
+            $booking->id
+        );
         return response()->json(["message" => "booking cancelled successfully", "booking" => new BookingResource($booking)]);
     }
     public function getBooking(Request $request, Booking $booking)
@@ -133,6 +151,13 @@ class BookingController extends Controller
         }
 
         $updateRequest = BookingUpdateRequest::create([...$data, $booking]);
+        NotificationService::createNotification(
+            $booking->apartment->owner_id,
+            'update_request_created',
+            'Booking Update Request',
+            "{$user->first_name} has requested to update the booking for {$booking->apartment->title}.",
+            $updateRequest->id
+        );
 
         return response()->json(["message" => "update request created successfully, waiting approval from owner.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)], 201);
     }
@@ -165,6 +190,14 @@ class BookingController extends Controller
         }
         $updateRequest->update($data);
 
+        NotificationService::createNotification(
+            $booking->apartment->owner_id,
+            'update_request_updated',
+            'Update request modified',
+            'The tenant has modified the update request details.',
+            $updateRequest->id
+        );
+
         return response()->json(["message" => "update request updated successfully, waiting approval from owner.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
     public function cancelUpdateRequest(Request $request, BookingUpdateRequest $updateRequest)
@@ -181,12 +214,22 @@ class BookingController extends Controller
         }
         $updateRequest->update(["status" => BookingUpdateRequestStatus::CANCELLED]);
 
+        NotificationService::createNotification(
+            $booking->apartment->owner_id,
+            'update_request_cancelled',
+            'Update request cancelled',
+            'The tenant has cancelled the booking update request.',
+            $updateRequest->id
+        );
+
         return response()->json(["message" => "update request cancelled successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
 
     // =======================
     //          OWNER
     // =======================
+
+
     public function ownerGetBooking(Request $request, Booking $booking)
     {
         $user = $request->user();
@@ -230,6 +273,14 @@ class BookingController extends Controller
 
         $booking->update(["status" => BookingStatus::APPROVED]);
 
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'booking_approved',
+            'Booking Approved',
+            "Your booking for {$apartment->title} from {$booking->start_date} to {$booking->end_date} has been approved.",
+            $booking->id
+        );
+
         return response()->json(["message" => "booking approved successfully", "booking" => new BookingResource($booking)]);
     }
     public function ownerRejectBooking(Request $request, Booking $booking)
@@ -252,6 +303,14 @@ class BookingController extends Controller
         }
 
         $booking->update(["status" => BookingStatus::REJECTED]);
+
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'booking_rejected',
+            'Booking Rejected',
+            "Your booking for {$apartment->title} from {$booking->start_date} to {$booking->end_date} has been rejected.",
+            $booking->id
+        );
 
         return response()->json(["message" => "booking rejected successfully", "booking" => new BookingResource($booking)]);
     }
@@ -317,6 +376,13 @@ class BookingController extends Controller
         $tenant->update(["wallet" => $wallet + $amount_to_add]);
         // update request
         $updateRequest->update(["status" => BookingUpdateRequestStatus::APPROVED]);
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'update_request_approved',
+            'Update Request Approved',
+            "Your update request for {$apartment->title} booking has been approved.",
+            $updateRequest->id
+        );
 
         return response()->json(["message" => "update request approved successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
@@ -346,6 +412,13 @@ class BookingController extends Controller
 
         // update request
         $updateRequest->update(["status" => BookingUpdateRequestStatus::REJECTED]);
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'update_request_rejected',
+            'Update Request Rejected',
+            "Your update request for {$apartment->title} booking has been rejected.",
+            $updateRequest->id
+        );
 
         return response()->json(["message" => "update request rejected successfully.", "updateRequest" => new BookingUpdateRequestResource($updateRequest)]);
     }
@@ -366,6 +439,8 @@ class BookingController extends Controller
     // =======================
     //          ADMIN
     // =======================
+
+
     public function adminCreateBooking(Request $request, Apartment $apartment)
     {
         $validated_data = $request->validate([
@@ -374,7 +449,7 @@ class BookingController extends Controller
             "number_of_guests" => "required|integer|min:1",
             "tenant_notes" => "nullable|string",
             "tenant_id" => 'required|string',
-            "status" =>  ['required', Rule::enum(BookingStatus::class)]
+            "status" => ['required', Rule::enum(BookingStatus::class)]
         ]);
 
         // check apartment
@@ -407,7 +482,21 @@ class BookingController extends Controller
             "apartment_id" => $apartment->id,
             "total_price" => $total_price
         ]);
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'booking_created_by_admin',
+            'Booking created',
+            'An admin has created a booking for you.',
+            $booking->id
+        );
 
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'booking_created_by_admin',
+            'New booking created',
+            'An admin has created a booking for your apartment.',
+            $booking->id
+        );
         return response()->json([
             "message" => "booking created successfully",
             "booking" => new BookingResource($booking)
@@ -434,7 +523,21 @@ class BookingController extends Controller
         $total_price = Booking::calculateTotalPrice($validated_data["start_date"], $validated_data["end_date"], $apartment->price_per_night);
 
         $booking->update([...$validated_data, "total_price" => $total_price]);
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'booking_updated_by_admin',
+            'Booking updated',
+            'An admin has updated a booking for you.',
+            $booking->id
+        );
 
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'booking_updated_by_admin',
+            'booking updated',
+            'An admin has updated a booking for your apartment.',
+            $booking->id
+        );
         return response()->json(["message" => "booking updated successfully", "booking" => new BookingResource($booking)]);
     }
     public function adminDeleteBooking(Request $request, Booking $booking)
@@ -444,6 +547,22 @@ class BookingController extends Controller
             return response()->json(["message" => "you can't delete approved bookings."], 400);
         }
 
+        NotificationService::createNotification(
+            $booking->tenant_id,
+            'booking_deleted_by_admin',
+            'Booking cancelled',
+            'Your booking has been cancelled by an admin.',
+            $booking->id
+        );
+
+
+        NotificationService::createNotification(
+            $booking->apartment->owner_id,
+            'booking_deleted_by_admin',
+            'Booking cancelled',
+            'A booking for your apartment has been cancelled by an admin.',
+            $booking->id
+        );
         $booking->delete();
 
         return response()->json(["message" => "booking deleted successfully"], 204);

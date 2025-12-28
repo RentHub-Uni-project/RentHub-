@@ -12,6 +12,8 @@ use App\Http\Requests\AdminUpdateApartmentRequest;
 use App\Http\Resources\ApartmentResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Services\NotificationService;
+
 
 class ApartmentController extends Controller
 {
@@ -233,48 +235,48 @@ class ApartmentController extends Controller
 
     // delete apartment from admin or owner
     public function destroy(Request $request, Apartment $apartment)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    // Authorization: owner or admin only
-    if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
-        return response()->json([
-            'message' => 'You are not authorized to delete this apartment'
-        ], 403);
-    }
-
-    DB::beginTransaction();
-
-    try {
-        // Delete apartment images (files + DB records)
-        foreach ($apartment->images as $image) {
-            if (Storage::disk('public')->exists($image->image_url)) {
-                Storage::disk('public')->delete($image->image_url);
-            }
-            $image->delete();
+        // Authorization: owner or admin only
+        if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
+            return response()->json([
+                'message' => 'You are not authorized to delete this apartment'
+            ], 403);
         }
 
-        // Delete apartment folder (optional but recommended)
-        Storage::disk('public')->deleteDirectory("apartments/{$apartment->id}");
+        DB::beginTransaction();
 
-        // Delete apartment
-        $apartment->delete();
+        try {
+            // Delete apartment images (files + DB records)
+            foreach ($apartment->images as $image) {
+                if (Storage::disk('public')->exists($image->image_url)) {
+                    Storage::disk('public')->delete($image->image_url);
+                }
+                $image->delete();
+            }
 
-        DB::commit();
+            // Delete apartment folder (optional but recommended)
+            Storage::disk('public')->deleteDirectory("apartments/{$apartment->id}");
 
-        return response()->json([
-            'message' => 'Apartment deleted successfully'
-        ], 200);
+            // Delete apartment
+            $apartment->delete();
 
-    } catch (\Throwable $e) {
-        DB::rollBack();
+            DB::commit();
 
-        return response()->json([
-            'message' => 'Failed to delete apartment',
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json([
+                'message' => 'Apartment deleted successfully'
+            ], 200);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to delete apartment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
 
@@ -306,12 +308,26 @@ class ApartmentController extends Controller
     public function approve(Apartment $apartment)
     {
         $apartment->update(['status' => 'approved']);
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'apartment_approved',
+            'Apartment approved',
+            'Your apartment listing has been approved and is now visible to tenants.',
+            $apartment->id
+        );
         return response()->json(['message' => 'Apartment approved', "apartment" => new ApartmentResource($apartment)]);
     }
 
     public function reject(Apartment $apartment)
     {
         $apartment->update(['status' => 'rejected']);
-        return response()->json(['message' => 'Apartment rejected',  "apartment" => new ApartmentResource($apartment)]);
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'apartment_rejected',
+            'Apartment rejected',
+            'Your apartment listing has been rejected. Please review the details and submit it again.',
+            $apartment->id
+        );
+        return response()->json(['message' => 'Apartment rejected', "apartment" => new ApartmentResource($apartment)]);
     }
 }

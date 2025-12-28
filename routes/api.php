@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ApartmentController;
 use App\Http\Controllers\FavoriteApartmentController;
 use App\Http\Controllers\ReviewController;
@@ -73,6 +74,7 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
     });
 });
 
+
 // Reviews
 Route::prefix("reviews")->middleware(['auth:sanctum'])->group(function () {
     // Admin APIs
@@ -125,4 +127,9 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
         Route::get("/get-update-request/{updateRequest}", [BookingController::class, "adminGetUpdateRequest"]);
         Route::get("/delete-update-requests/{updateRequest}", [BookingController::class, "adminDeleteUpdateRequest"]);
     });
+});
+
+//  Notifications
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index']);
 });

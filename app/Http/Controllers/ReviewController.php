@@ -9,6 +9,8 @@ use App\Models\Review;
 use App\Models\Booking;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
+
 
 class ReviewController extends Controller
 {
@@ -64,7 +66,13 @@ class ReviewController extends Controller
             'apartment_id' => $apartment->id,
             'tenant_id' => $user->id
         ]);
-
+        NotificationService::createNotification(
+            $apartment->owner_id,
+            'review_created',
+            'New Review Received',
+            "{$user->first_name} has submitted a review for your apartment {$apartment->title}.",
+            $review->id
+        );
         return response()->json(["message" => "review created successfully.", "review" => new ReviewResource($review)], 201);
     }
 

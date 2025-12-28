@@ -1,0 +1,28 @@
+Tenant books an apartment               \
+Tenant cancels booking                   \
+Tenant requests update                    \
+Tenant adds review                         \
+Tenant cancel Update Request                \
+Tenant edit Update Request
+
+adminCreateBooking                                              BookingController
+adminUpdateBooking
+adminDeleteBooking
+                                            /
+Owner rejects booking                      /
+Owner approves booking                    /
+Owner approves update request            /
+Owner rejects update request            /
+
+
+Approve apartment
+Approve apartment
+
+
+
+Tenant adds review
+
+
+
+
+New Message Received  //TODO
