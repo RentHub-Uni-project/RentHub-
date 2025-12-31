@@ -7,22 +7,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateApartmentRequest extends FormRequest
 {
-    /**
-     */
-    public function authorize()
-    {
-        $user = $this->user();
-        $apartment = \App\Models\Apartment::find($this->route('id'));
-
-        if (!$apartment) {
-            return false;
-        }
-
-        return $user->role === 'admin' || $apartment->owner_id === $user->id;
-    }
-
-    /**
-     */
     public function rules()
     {
         return [
@@ -30,10 +14,10 @@ class UpdateApartmentRequest extends FormRequest
             'address' => 'sometimes|string|max:500',
             'price_per_night' => 'sometimes|numeric|min:0',
             'price_per_month' => 'sometimes|numeric|min:0',
-            'max_guests' => 'sometimes|integer|min:1',
-            'bedrooms' => 'sometimes|integer|min:0',
-            'bathrooms' => 'sometimes|integer|min:0',
-            'governorate' => 'required|in:' . implode(',', SyrianGovernorates::all()),
+            'max_guests' => 'sometimes|numeric|min:1',
+            'bedrooms' => 'sometimes|numeric|min:0',
+            'bathrooms' => 'sometimes|numeric|min:0',
+            'governorate' => 'in:' . implode(',', SyrianGovernorates::all()),
             'description' => 'nullable|string',
 
             'images' => 'nullable|array|max:10',

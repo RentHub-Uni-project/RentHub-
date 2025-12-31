@@ -15,6 +15,7 @@ class BookingUpdateRequestResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            "id" => $this->id,
             "requested_start_date" => $this->requested_start_date,
             "requested_end_date" => $this->requested_end_date,
             "requested_tenant_notes" => $this->requested_tenant_notes,

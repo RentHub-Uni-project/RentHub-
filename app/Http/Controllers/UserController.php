@@ -7,9 +7,10 @@ use App\Enums\UserStatus;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -45,37 +46,54 @@ class UserController extends Controller
             "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
         ]);
 
+        return response(["message" => $validatedData, "request" => $request]);
+
         // handle file uploads
         $profileImagePath = null;
         $idImagePath = null;
 
-        if ($request->hasFile('avatar')) {
-            $profileImagePath = $request->file('avatar')
-                ->store('profiles', 'public');
-        }
+        DB::beginTransaction();
 
-        if ($request->hasFile('id_card')) {
-            $idImagePath = $request->file('id_card')
-                ->store('ids', 'public');
-        }
+        try {
+            if ($request->hasFile('avatar')) {
+                $profileImagePath = $request->file('avatar')
+                    ->store('profiles', $user->id, 'public');
+            }
 
-        $updatedFields = $validatedData;
-        if (array_key_exists("password", $validatedData)) {
-            $updatedFields["password"] = Hash::make($validatedData["password"]);
-        }
+            if ($request->hasFile('id_card')) {
 
-        if ($profileImagePath) {
-            $updatedFields["avatar"] = $profileImagePath;
-        }
-        if ($idImagePath) {
-            $updatedFields["id_card"] = $idImagePath;
-        }
-        $user->update([...$updatedFields, "status" => "pending"]);
+                $idImagePath = $request->file('id_card')
+                    ->store('ids', $user->id, 'public');
+            }
 
-        return response()->json([
-            "message" => "Your profile updated it successfully, waiting for admin approval",
-            'user' => new UserResource($user)
-        ], 200);
+            $updatedFields = $validatedData;
+            if (array_key_exists("password", $validatedData)) {
+                $updatedFields["password"] = Hash::make($validatedData["password"]);
+            }
+
+            if ($profileImagePath) {
+                $updatedFields["avatar"] = $profileImagePath;
+            }
+            if ($idImagePath) {
+                $updatedFields["id_card"] = $idImagePath;
+            }
+
+            $user->update($updatedFields);
+
+            DB::commit();
+
+            return response()->json([
+                "message" => "Your profile updated it successfully, waiting for admin approval",
+                'user' => new UserResource($user)
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     public function getProfile(Request $request)
     {
@@ -84,21 +102,40 @@ class UserController extends Controller
     }
     public function deleteProfile(Request $request)
     {
-        request()->user()->delete();
-        return response()->json(["message" => "Profile deleted successfully"], 204);
+        $user = $request->user();
+
+        DB::beginTransaction();
+
+        try {
+            $user->delete();
+            // delete images
+            Storage::disk("public")->deleteDirectory("ids/" . $user->id);
+            Storage::disk("public")->deleteDirectory("profiles/" . $user->id);
+
+            DB::commit();
+
+            return response()->json(["message" => "Profile deleted successfully"], 204);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to delete profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // Admin
     public function adminCreateUser(Request $request)
     {
         $validatedData = $request->validate([
-            "phone" => "string|unique:users,phone",
+            "phone" => "required|string|unique:users,phone",
             "role" => ['required', Rule::enum(UserRole::class)],
             "status" => ['required', Rule::enum(UserStatus::class)],
-            "first_name" => "string|max:50",
-            "last_name" => "string|max:50",
-            "password" => "min:8",
-            "birth_date" => "date",
+            "first_name" => "required|string|max:50",
+            "last_name" => "required|string|max:50",
+            "password" => "required|min:8",
+            "birth_date" => "required|date",
             "wallet" => "sometimes|decimal:8,2",
             "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
             "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
@@ -108,27 +145,40 @@ class UserController extends Controller
         $profileImagePath = null;
         $idImagePath = null;
 
-        if ($request->hasFile('avatar')) {
-            $profileImagePath = $request->file('avatar')
-                ->store('profiles', 'public');
+        DB::beginTransaction();
+
+        try {
+            if ($request->hasFile('avatar')) {
+                $profileImagePath = $request->file('avatar')
+                    ->store('profiles', 'public');
+            }
+
+            if ($request->hasFile('id_card')) {
+                $idImagePath = $request->file('id_card')
+                    ->store('ids', 'public');
+            }
+
+            $user = User::create([
+                ...$validatedData,
+                'avatar' => "storage/" . $profileImagePath,
+                'id_card' => "storage/" . $idImagePath,
+                'password' => Hash::make($validatedData["password"]),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'User created successfully.',
+                'user' => new UserResource($user)
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to create user',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($request->hasFile('id_card')) {
-            $idImagePath = $request->file('id_card')
-                ->store('ids', 'public');
-        }
-
-        $user = User::create([
-            ...$validatedData,
-            'avatar' => "storage/" . $profileImagePath,
-            'id_card' => "storage/" . $idImagePath,
-            'password' => Hash::make($validatedData["password"]),
-        ]);
-
-        return response()->json([
-            'message' => 'User created successfully.',
-            'user' => new UserResource($user)
-        ], 201);
     }
 
     public function adminUpdateUser(Request $request, User $user)
@@ -150,34 +200,46 @@ class UserController extends Controller
         $profileImagePath = null;
         $idImagePath = null;
 
-        if ($request->hasFile('avatar')) {
-            $profileImagePath = $request->file('avatar')
-                ->store('profiles', 'public');
-        }
+        DB::beginTransaction();
+        try {
+            if ($request->hasFile('avatar')) {
+                $profileImagePath = $request->file('avatar')
+                    ->store('profiles', 'public');
+            }
 
-        if ($request->hasFile('id_card')) {
-            $idImagePath = $request->file('id_card')
-                ->store('ids', 'public');
-        }
+            if ($request->hasFile('id_card')) {
+                $idImagePath = $request->file('id_card')
+                    ->store('ids', 'public');
+            }
 
-        $updatedFields = $validatedData;
-        if (array_key_exists("password", $validatedData)) {
-            $updatedFields["password"] = Hash::make($validatedData["password"]);
-        }
+            $updatedFields = $validatedData;
+            if (array_key_exists("password", $validatedData)) {
+                $updatedFields["password"] = Hash::make($validatedData["password"]);
+            }
 
-        if ($profileImagePath) {
-            $updatedFields["avatar"] = $profileImagePath;
-        }
-        if ($idImagePath) {
-            $updatedFields["id_card"] = $idImagePath;
-        }
+            if ($profileImagePath) {
+                $updatedFields["avatar"] = $profileImagePath;
+            }
+            if ($idImagePath) {
+                $updatedFields["id_card"] = $idImagePath;
+            }
 
-        $user->update($updatedFields);
+            $user->update($updatedFields);
 
-        return response()->json([
-            "message" => "User updated successfully.",
-            'user' => new UserResource($user)
-        ], 200);
+            DB::commit();
+
+            return response()->json([
+                "message" => "User updated successfully.",
+                'user' => new UserResource($user)
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to update user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function adminListUsers(Request $request)
@@ -223,7 +285,23 @@ class UserController extends Controller
 
     public function adminDeleteUser(Request $request, User $user)
     {
-        $user->delete();
-        return response()->json(["message" => "User deleted successfully"], 204);
+        DB::beginTransaction();
+        try {
+            $user->delete();
+            // delete images
+            Storage::disk("public")->deleteDirectory("ids/" . $user->id);
+            Storage::disk("public")->deleteDirectory("profiles/" . $user->id);
+
+            DB::commit();
+
+            return response()->json(["message" => "User deleted successfully"], 204);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to delete user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

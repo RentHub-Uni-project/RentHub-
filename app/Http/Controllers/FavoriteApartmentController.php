@@ -12,6 +12,7 @@ class FavoriteApartmentController extends Controller
 {
     public function toggleFavorite(Request $request, Apartment $apartment)
     {
+        $apartment->load('images');
         $favorite = FavoriteApartment::where('tenant_id', $request->user()->id)
             ->where('apartment_id', $apartment->id)
             ->first();
@@ -26,7 +27,8 @@ class FavoriteApartmentController extends Controller
             'apartment_id' => $apartment->id,
         ]);
 
-        return response()->json(['message' => 'apartment Added to favorites', 'apartment' => new ApartmentResource($apartment)]);
+
+        return response()->json(['message' => 'apartment Added to favorites', 'apartment' => $apartment]);
     }
 
 
@@ -35,7 +37,7 @@ class FavoriteApartmentController extends Controller
     {
         $favoriteApartments = Apartment::whereHas('favorites', function ($q) use ($request) {
             $q->where('tenant_id', $request->user()->id);
-        })->get();
+        })->with('images')->get();
         return response()->json(["message" => "success", "favoriteAppartments" => $favoriteApartments]);
     }
 }

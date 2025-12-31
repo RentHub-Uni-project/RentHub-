@@ -69,7 +69,7 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
 
     // Tenant APIs
     Route::prefix("tenant")->middleware("role:tenant")->group(function () {
-        Route::post('/mark-as-favorite/{apartment}', [FavoriteApartmentController::class, 'toggleFavorite']);
+        Route::post('/toggle-favorite/{apartment}', [FavoriteApartmentController::class, 'toggleFavorite']);
         Route::get('/list-my-favorites', [FavoriteApartmentController::class, 'myFavorites']);
     });
 });
@@ -100,10 +100,12 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
         Route::get("/get/{booking}", [BookingController::class, "getBooking"]);
         Route::get("/list-my-bookings", [BookingController::class, "listMyBookings"]);
         Route::post("/create/{apartment}", [BookingController::class, "createBooking"]);
-        Route::delete("/cancel/{booking}", [BookingController::class, "cancelBooking"]);
-        Route::post('/creat-update-request/{booking}', [BookingController::class, "createUpdateRequest"]);
+        Route::put("/cancel/{booking}", [BookingController::class, "cancelBooking"]);
+        Route::post('/create-update-request/{booking}', [BookingController::class, "createUpdateRequest"]);
         Route::put('/edit-update-request/{updateRequest}', [BookingController::class, "editUpdateRequest"]);
-        Route::delete('/cancel-update-request/{updateRequest}', [BookingController::class, "cancelUpdateRequest"]);
+        Route::put('/cancel-update-request/{updateRequest}', [BookingController::class, "cancelUpdateRequest"]);
+        Route::get("/get-update-request/{updateRequest}", [BookingController::class, "getUpdateRequest"]);
+        Route::get("/list-update-requests/{booking}", [BookingController::class, "listUpdateRequests"]);
     });
 
     Route::prefix("owner")->middleware("role:owner")->group(function () {

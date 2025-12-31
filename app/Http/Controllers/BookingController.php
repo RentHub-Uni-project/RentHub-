@@ -30,18 +30,12 @@ class BookingController extends Controller
     {
         $data = $request->validate([
             'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after:start_date',
+            'end_date' => 'required|date|after_or_equal:start_date',
             "number_of_guests" => "required|integer|min:1",
             "tenant_notes" => "nullable|string",
         ]);
 
         $user = $request->user();
-        // check apartment
-        if (!$apartment->isApproved()) {
-            return response()->json([
-                "message" => "this aprtment is not approved, you can't create a booking for it."
-            ], 400);
-        }
 
         $total_price = Booking::calculateTotalPrice($data["start_date"], $data["end_date"], $apartment->price_per_night);
 
@@ -52,6 +46,7 @@ class BookingController extends Controller
             "status" => BookingStatus::PENDING,
             "total_price" => $total_price
         ]);
+        $booking->load('apartment');
         NotificationService::createNotification(
             $apartment->owner_id,
             'booking_created',
@@ -74,7 +69,7 @@ class BookingController extends Controller
             ], 403);
         }
         $booking->update(["status" => BookingStatus::CANCELLED]);
-
+        $booking->load('apartment');
         NotificationService::createNotification(
             $booking->apartment->owner_id,
             'booking_cancelled',
@@ -94,12 +89,13 @@ class BookingController extends Controller
                 "message" => "you are not the owner of the given booking."
             ], 403);
         }
+        $booking->load('apartment');
         return response()->json(["message" => "booking found successfully", "booking" => new BookingResource($booking)]);
     }
     public function listMyBookings(Request $request)
     {
         $user = $request->user();
-        $bookings = Booking::where("tenant_id", $user->id)->get();
+        $bookings = Booking::where("tenant_id", $user->id)->with('apartment')->get();
 
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
@@ -122,7 +118,7 @@ class BookingController extends Controller
             return response()->json(["message" => "you are not the owner of this booking."], 403);
         }
 
-        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id);
+        $updateRequests = BookingUpdateRequest::where("booking_id", $booking->id)->with('booking')->get();
 
         return response()->json(["message" => "success", "updaeRequests" => BookingUpdateRequestResource::collection($updateRequests)]);
     }
@@ -136,13 +132,13 @@ class BookingController extends Controller
         }
 
         $data = $request->validate([
-            "request_tenant_notes" => "sometimes|nullable|string",
+            "requested_tenant_notes" => "sometimes|nullable|string",
             "requested_start_date" => "required|date",
-            "requested_end_date" => "required|date|after:requested_start_date",
+            "requested_end_date" => "required|date|after_or_equal:requested_start_date",
             "requested_number_of_guests" => "sometimes|nullable|numeric"
         ]);
         // check start_date
-        $start_date = $data["start_date"];
+        $start_date = Carbon::parse($data["requested_start_date"]);
         // if provided start_date == previous one, no validation needed
         if ($start_date != $booking->start_date) {
             if ($start_date < new DateTime()) {
@@ -150,7 +146,8 @@ class BookingController extends Controller
             }
         }
 
-        $updateRequest = BookingUpdateRequest::create([...$data, $booking]);
+        $updateRequest = BookingUpdateRequest::create([...$data, "booking_id" => $booking->id]);
+        $updateRequest->load("booking");
         NotificationService::createNotification(
             $booking->apartment->owner_id,
             'update_request_created',
@@ -175,13 +172,13 @@ class BookingController extends Controller
         }
 
         $data = $request->validate([
-            "request_tenant_notes" => "sometimes|nullable|string",
+            "requested_tenant_notes" => "sometimes|nullable|string",
             "requested_start_date" => "required|date",
-            "requested_end_date" => "required|date|after:requested_start_date",
+            "requested_end_date" => "required|date|after_or_equal:requested_start_date",
             "requested_number_of_guests" => "sometimes|nullable|numeric"
         ]);
         // check start_date
-        $start_date = $data["start_date"];
+        $start_date = Carbon::parse($data["requested_start_date"]);
         // if provided start_date == previous one, no validation needed
         if ($start_date != $booking->start_date) {
             if ($start_date < new DateTime()) {
@@ -452,12 +449,6 @@ class BookingController extends Controller
             "status" => ['required', Rule::enum(BookingStatus::class)]
         ]);
 
-        // check apartment
-        if (!$apartment->isApproved()) {
-            return response()->json([
-                "message" => "this aprtment is not approved, you can't create a booking for it."
-            ], 400);
-        }
         // check apartment availablity
         if ($validated_data["status"] == BookingStatus::APPROVED->value) {
             $availability = $apartment->checkAvailability($validated_data["start_date"], $validated_data["end_date"]);
@@ -569,7 +560,7 @@ class BookingController extends Controller
     }
     public function adminListBookings(Request $request)
     {
-        $query = Booking::query();
+        $query = Booking::query()->with('apartment');
 
         $query->when($request->filled('tenant_id'), fn($q) => $q->where('tenant_id', $request->tenant_id))
             ->when($request->filled('apartment_id'), fn($q) => $q->where('apartment_id', $request->apartment_id))
@@ -587,7 +578,6 @@ class BookingController extends Controller
         // Pagination
         $perPage = $request->get('per_page', 15);
 
-        // TODO: apply resource
 
         $result = $query->paginate($perPage);
         return response()->json(["message" => "success", "bookings" => $result], 200);
