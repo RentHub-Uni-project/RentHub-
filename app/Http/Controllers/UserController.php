@@ -253,7 +253,7 @@ class UserController extends Controller
                 return $q->where('last_name', 'LIKE', '%' . $request->last_name . '%');
             })
             ->when($request->filled('phone'), function ($q) use ($request) {
-                return $q->where('phone', 'last_name', 'LIKE', '%' . $request->phone . '%');
+                return $q->where('phone', 'LIKE', '%' . $request->phone . '%');
             })
             ->when($request->filled('role'), function ($q) use ($request) {
                 return $q->where('role', $request->role);
