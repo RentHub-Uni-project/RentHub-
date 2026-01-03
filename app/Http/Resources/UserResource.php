@@ -25,6 +25,7 @@ class UserResource extends JsonResource
             'id_card' => $this->id_card,
             'status' => $this->status,
             'birth_date' => $this->birth_date,
+            'wallet' => $this->wallet,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
 

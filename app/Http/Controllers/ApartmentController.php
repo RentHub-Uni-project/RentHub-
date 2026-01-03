@@ -92,7 +92,7 @@ class ApartmentController extends Controller
     // Show details of a specific apartment
     public function show(Request $request, Apartment $apartment)
     {
-        $user = $request->user();
+        $apartment->load(["images"]);
         return response()->json(["message" => "apartment found successfully.", "apartment" => $apartment]);
     }
 
@@ -148,7 +148,6 @@ class ApartmentController extends Controller
             return response()->json([
                 'message' => 'Apartment created successfully',
                 'apartment' => $apartment,
-                'images' => $apartment->images()->get()
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();

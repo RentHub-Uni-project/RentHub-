@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -43,7 +44,10 @@ class UserController extends Controller
             "password" => "sometimes|min:8",
             "birth_date" => "sometimes|date",
             "avatar" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png",
-            "id_card" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png"
+            "id_card" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png",
+
+            "delete_id_card" => "sometimes|in:true,false",
+            "delete_avatar" => "sometimes|in:true,false"
         ]);
 
         return response(["message" => $validatedData, "request" => $request, "request-facade" => request()]);
@@ -55,27 +59,57 @@ class UserController extends Controller
         DB::beginTransaction();
 
         try {
+            $updatedFields = $validatedData;
+            // delete images if they provided as null
+            if ($request->has("delete_avatar")) {
+                if ($validatedData["delete_avatar"] == "true") {
+                    if ($user->avatar) {
+                        if (Storage::disk('public')->exists($user->avatar)) {
+                            Storage::disk('public')->delete($user->avatar);
+                        }
+                    }
+
+                    unset($updatedFields["delete_avatar"]);
+                    $updatedFields["avatar"] = null;
+                }
+            }
+            if ($request->has("delete_id_card")) {
+                if ($validatedData["delete_id_card"] == "true") {
+                    if ($user->id_card) {
+                        if (Storage::disk('public')->exists($user->id_card)) {
+                            Storage::disk('public')->delete($user->id_card);
+                        }
+                    }
+                    unset($updatedFields["delete_id_card"]);
+                    $updatedFields["id_card"] = null;
+                }
+            }
+            // store new images if they exist
             if ($request->hasFile('avatar')) {
                 $profileImagePath = $request->file('avatar')
-                    ->store('profiles', $user->id, 'public');
+                    ->store('profiles/' . $user->id, 'public');
+                if ($user->avatar) {
+                    if (Storage::disk('public')->exists($user->avatar)) {
+                        Storage::disk('public')->delete($user->avatar);
+                    }
+                }
+                $updatedFields["avatar"] = $profileImagePath;
             }
 
             if ($request->hasFile('id_card')) {
-
                 $idImagePath = $request->file('id_card')
-                    ->store('ids', $user->id, 'public');
-            }
-
-            $updatedFields = $validatedData;
-            if (array_key_exists("password", $validatedData)) {
-                $updatedFields["password"] = Hash::make($validatedData["password"]);
-            }
-
-            if ($profileImagePath) {
-                $updatedFields["avatar"] = $profileImagePath;
-            }
-            if ($idImagePath) {
+                    ->store('ids/' . $user->id, 'public');
+                if ($user->id_card) {
+                    if (Storage::disk('public')->exists($user->id_card)) {
+                        Storage::disk('public')->delete($user->id_card);
+                    }
+                }
                 $updatedFields["id_card"] = $idImagePath;
+            }
+
+
+            if ($request->has('password')) {
+                $updatedFields["password"] = Hash::make($validatedData["password"]);
             }
 
             $user->update($updatedFields);
@@ -136,7 +170,7 @@ class UserController extends Controller
             "last_name" => "required|string|max:50",
             "password" => "required|min:8",
             "birth_date" => "required|date",
-            "wallet" => "sometimes|decimal:8,2",
+            "wallet" => "sometimes|numeric",
             "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
             "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
         ]);
@@ -184,16 +218,19 @@ class UserController extends Controller
     public function adminUpdateUser(Request $request, User $user)
     {
         $validatedData = $request->validate([
-            "phone" => "string|unique:users,phone",
-            "role" => Rule::enum(UserRole::class),
-            "status" => Rule::enum(UserStatus::class),
-            "first_name" => "string|max:50",
-            "last_name" => "string|max:50",
-            "password" => "min:8",
-            "birth_date" => "date",
-            "wallet" => "sometimes|decimal:8,2",
-            "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
-            "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
+            "phone" => "sometimes|string|unique:users,phone",
+            "role" => ["sometimes", Rule::enum(UserRole::class)],
+            "status" => ["sometimes", Rule::enum(UserStatus::class)],
+            "first_name" => "sometimes|string|max:50",
+            "last_name" => "sometimes|string|max:50",
+            "password" => "sometimes|min:8",
+            "birth_date" => "sometimes|date",
+            "wallet" => "sometimes|numeric",
+            "avatar" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png",
+            "id_card" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png",
+
+            "delete_id_card" => "sometimes|in:true,false",
+            "delete_avatar" => "sometimes|in:true,false"
         ]);
 
         // handle file uploads
@@ -202,26 +239,60 @@ class UserController extends Controller
 
         DB::beginTransaction();
         try {
+            $updatedFields = $validatedData;
+            // delete images if they provided as null
+            if ($request->has("delete_avatar")) {
+                if ($validatedData["delete_avatar"] == "true") {
+                    if ($user->avatar) {
+                        if (Storage::disk('public')->exists($user->avatar)) {
+                            Storage::disk('public')->delete($user->avatar);
+                        }
+                    }
+
+                    unset($updatedFields["delete_avatar"]);
+                    $updatedFields["avatar"] = null;
+                }
+            }
+            if ($request->has("delete_id_card")) {
+                if ($validatedData["delete_id_card"] == "true") {
+
+                    if ($user->id_card != null) {
+                        if (Storage::disk('public')->exists($user->id_card)) {
+                            Storage::disk('public')->delete($user->id_card);
+                        }
+                    }
+
+                    unset($updatedFields["delete_id_card"]);
+                    Arr::set($updatedFields, "id_card", null);
+                }
+            }
+            // store new images if they exist
+
             if ($request->hasFile('avatar')) {
                 $profileImagePath = $request->file('avatar')
-                    ->store('profiles', 'public');
+                    ->store('profiles/' . $user->id, 'public');
+                if ($user->avatar) {
+                    if (Storage::disk('public')->exists($user->avatar)) {
+                        Storage::disk('public')->delete($user->avatar);
+                    }
+                }
+                $updatedFields["avatar"] = $profileImagePath;
             }
 
             if ($request->hasFile('id_card')) {
                 $idImagePath = $request->file('id_card')
-                    ->store('ids', 'public');
-            }
-
-            $updatedFields = $validatedData;
-            if (array_key_exists("password", $validatedData)) {
-                $updatedFields["password"] = Hash::make($validatedData["password"]);
-            }
-
-            if ($profileImagePath) {
-                $updatedFields["avatar"] = $profileImagePath;
-            }
-            if ($idImagePath) {
+                    ->store('ids/' . $user->id, 'public');
+                if ($user->id_card) {
+                    if (Storage::disk('public')->exists($user->id_card)) {
+                        Storage::disk('public')->delete($user->id_card);
+                    }
+                }
                 $updatedFields["id_card"] = $idImagePath;
+            }
+
+
+            if ($request->has('password')) {
+                $updatedFields["password"] = Hash::make($validatedData["password"]);
             }
 
             $user->update($updatedFields);
