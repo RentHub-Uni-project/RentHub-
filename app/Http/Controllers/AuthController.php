@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -16,23 +17,19 @@ class AuthController extends Controller
     public function register(Request $request)
     {
 
-        try {
-            $validatedData = $request->validate([
-                "phone" => "required|string|unique:users,phone",
-                "role" => Rule::enum(UserRole::class)->except([UserRole::ADMIN]),
-                "first_name" => "required|string|max:50",
-                "last_name" => "required|string|max:50",
-                "password" => "required|min:8",
-                "birth_date" => "required|date",
-                "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
-                "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 400);
-        }
+
+        $validatedData = $request->validate([
+            "phone" => "required|string|unique:users,phone",
+            "role" => Rule::enum(UserRole::class)->except([UserRole::ADMIN]),
+            "first_name" => "required|string|max:50",
+            "last_name" => "required|string|max:50",
+            "password" => "required|min:8",
+            "birth_date" => "required|date",
+            "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
+            "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
+        ]);
+
+        DB::beginTransaction();
 
         try {
             // handle file uploads
@@ -57,11 +54,14 @@ class AuthController extends Controller
                 'password' => Hash::make($validatedData["password"]),
             ]);
 
+            DB::commit();
+
             return response()->json([
                 'message' => 'Registration successful. Waiting for admin approval.',
                 'user' => new UserResource($user)
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'operation failed. Please try again.',
                 'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
@@ -71,17 +71,12 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        try {
-            $validatedData = $request->validate([
-                'phone' => 'required',
-                'password' => 'required'
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors(),
-            ], 400);
-        }
+
+        $validatedData = $request->validate([
+            'phone' => 'required',
+            'password' => 'required'
+        ]);
+
         try {
             $user = User::where('phone', $validatedData["phone"])->first();
 

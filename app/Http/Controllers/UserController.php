@@ -36,17 +36,17 @@ class UserController extends Controller
             ], 403);
         }
         $validatedData = $request->validate([
-            "phone" => "string|unique:users,phone",
-            "role" => Rule::enum(UserRole::class)->except([UserRole::ADMIN]),
-            "first_name" => "string|max:50",
-            "last_name" => "string|max:50",
-            "password" => "min:8",
-            "birth_date" => "date",
-            "avatar" => "nullable|image|max:5120|mimes:jpg,jpeg,png",
-            "id_card" => "nullable|image|max:5120|mimes:jpg,jpeg,png"
+            "phone" => "sometimes|string|unique:users,phone",
+            "role" => ["sometimes", Rule::enum(UserRole::class)->except([UserRole::ADMIN])],
+            "first_name" => "sometimes|string|max:50",
+            "last_name" => "sometimes|string|max:50",
+            "password" => "sometimes|min:8",
+            "birth_date" => "sometimes|date",
+            "avatar" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png",
+            "id_card" => "sometimes|nullable|image|max:5120|mimes:jpg,jpeg,png"
         ]);
 
-        return response(["message" => $validatedData, "request" => $request]);
+        return response(["message" => $validatedData, "request" => $request, "request-facade" => request()]);
 
         // handle file uploads
         $profileImagePath = null;

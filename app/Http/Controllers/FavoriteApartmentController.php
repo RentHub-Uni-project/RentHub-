@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\ApartmentResource;
 use App\Models\FavoriteApartment;
 use Illuminate\Http\Request;
 use App\Models\Apartment;

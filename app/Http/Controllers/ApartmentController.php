@@ -7,9 +7,6 @@ use App\Models\ApartmentImage;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreApartmentRequest;
 use App\Http\Requests\UpdateApartmentRequest;
-use App\Http\Requests\AdminApartmentRequest;
-use App\Http\Requests\AdminUpdateApartmentRequest;
-use App\Http\Resources\ApartmentResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\NotificationService;
@@ -28,14 +25,15 @@ class ApartmentController extends Controller
         $query = Apartment::query()
             ->with('images'); // load apartment images
 
-        /*  Search by keyword (title + address) */
-        if ($request->filled('keyword')) {
-            $keyword = $request->keyword;
 
-            $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', "%{$keyword}%")
-                    ->orWhere('address', 'like', "%{$keyword}%");
-            });
+        /*  address */
+        if ($request->filled('address')) {
+            $query->where('address', 'LIKE', '%' . $request->address . '%');
+        }
+
+        /*  title */
+        if ($request->filled('title')) {
+            $query->where('title', 'LIKE', '%' . $request->title . '%');
         }
 
         /*  Price filter */
@@ -232,8 +230,8 @@ class ApartmentController extends Controller
     {
         $user = $request->user();
 
-        // Authorization: owner or admin only
-        if ($user->role !== 'admin' && $apartment->owner_id !== $user->id) {
+        // check owner
+        if ($apartment->owner_id !== $user->id) {
             return response()->json([
                 'message' => 'You are not authorized to delete this apartment'
             ], 403);
@@ -269,28 +267,5 @@ class ApartmentController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-
-
-
-    // ======================
-    //  ADMIN - Admin APIs
-    // ======================
-
-    public function adminIndex()
-    {
-        return response()->json(["message" => "success", "apartments" => Apartment::all()]);
-    }
-
-    public function adminStore(AdminApartmentRequest $request)
-    {
-        $apartment = Apartment::create($request->validated());
-        return response()->json(["message" => "apartment created successfully.", "apartment" => new ApartmentResource($apartment)], 201);
-    }
-
-    public function adminUpdate(AdminUpdateApartmentRequest $request, Apartment $apartment)
-    {
-        $apartment->update($request->validated());
-        return response()->json(["message" => "apartment updated successfully.", "apartment" => new ApartmentResource($apartment)]);
     }
 }

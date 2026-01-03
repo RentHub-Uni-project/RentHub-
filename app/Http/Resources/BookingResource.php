@@ -28,7 +28,7 @@ class BookingResource extends JsonResource
 
             // Relationships
             'tenant' => new UserResource($this->whenLoaded('tenant')),
-            'apartment' => new ApartmentResource($this->whenLoaded('apartment')),
+            'apartment' => $this->whenLoaded('apartment'),
         ];
     }
 }

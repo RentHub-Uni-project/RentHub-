@@ -7,7 +7,6 @@ use App\Http\Resources\ReviewResource;
 use App\Models\Apartment;
 use App\Models\Review;
 use App\Models\Booking;
-use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
 
@@ -17,10 +16,6 @@ class ReviewController extends Controller
     // list apartment reviews (all)
     public function listApartmentReviews(Request $request, Apartment $apartment)
     {
-        $user = $request->user();
-        if (!$user->isAdmin() && !$apartment->isApproved()) {
-            return response()->json(["message" => "this appartment is not approved, you can't see its details."], 403);
-        }
         $reviews = $apartment->reviews;
         return response()->json(["message" => "success", "reviews" => ReviewResource::collection($reviews)]);
     }
@@ -120,82 +115,5 @@ class ReviewController extends Controller
             ->get();
 
         return response()->json(["message" => "success", "reviews" => ReviewResource::collection($reviews)]);
-    }
-
-    // ===============
-    //      ADMIN
-    // ===============
-
-    public function adminGetReview(Request $request, Review $review)
-    {
-        return response()->json([
-            'message' => 'Review found successfully.',
-            'reviews' => new ReviewResource($review)
-        ]);
-    }
-
-    //  * List all reviews in the system
-    public function adminListReviews()
-    {
-        $reviews = Review::with([
-            'apartment:id,title',
-            'tenant:id,first_name,last_name'
-        ])
-            ->latest()
-            ->get();
-        return response()->json([
-            'message' => 'success.',
-            'reviews' => ReviewResource::collection($reviews)
-        ]);
-    }
-
-    //  * Create a review (Admin only)
-    public function adminCreateReview(Request $request)
-    {
-        $data = $request->validate([
-            'booking_id' => 'required|exists:bookings,id',
-            'apartment_id' => 'required|exists:apartments,id',
-            'tenant_id' => 'required|numeric',
-            'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
-        ]);
-        // check tenant
-        $tenant = User::where("id", $data["tenant_id"])->first();
-        if (!$tenant) {
-            return response()->json(["message" => "user not found."], 404);
-        }
-        if (!$tenant->isTenant()) {
-            return response()->json(["message" => "the provided user is not a tenant."], 400);
-        }
-        $review = Review::create($data);
-
-        return response()->json([
-            'message' => 'Review created successfully.',
-            'review' => new ReviewResource($review)
-        ], 201);
-    }
-
-    //  * Update any review
-    public function adminUpdateReview(Request $request, Review $review)
-    {
-        $review->update($request->validate([
-            'rating' => 'sometimes|integer|min:1|max:5',
-            'comment' => 'sometimes|nullable|string|max:1000',
-        ]));
-
-        return response()->json([
-            'message' => 'Review updated successfully.',
-            'review' => new ReviewResource($review)
-        ]);
-    }
-
-    //  * Delete any review
-    public function adminDeleteReview(Request $request, Review $review)
-    {
-        $review->delete();
-
-        return response()->json([
-            'message' => 'Review deleted successfully.'
-        ], 204);
     }
 }
