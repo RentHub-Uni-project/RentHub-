@@ -90,8 +90,8 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
     });
 
     Route::prefix("owner")->middleware("role:owner")->group(function () {
-        Route::patch("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
-        Route::patch("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
+        Route::put("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
+        Route::put("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
         Route::get("/get-booking/{booking}", [BookingController::class, "ownerGetBooking"]);
         Route::get("/get-update-request/{updateRequest}", [BookingController::class, "ownerGetUpdateRequest"]);
         Route::get("/list-update-requests/{booking}", [BookingController::class, "ownerListUpdateRequests"]);
