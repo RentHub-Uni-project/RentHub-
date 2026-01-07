@@ -43,6 +43,11 @@ class Booking extends Model
         return $this->status == BookingStatus::PENDING->value;
     }
 
+    public function isCancelled()
+    {
+        return $this->status == BookingStatus::CANCELLED->value;
+    }
+
     public function resolveRouteBinding($value, $field = null)
     {
         $field = $field ?: $this->getRouteKeyName();
