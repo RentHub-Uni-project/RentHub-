@@ -62,7 +62,7 @@ class ApartmentController extends Controller
 
         /*  governorate */
         if ($request->filled('governorate')) {
-            $query->where('governorate', $request->governorate);
+            $query->where('governorate', 'LIKE', '%' . $request->governorate . '%');
         }
 
         // Add average rating as subquery

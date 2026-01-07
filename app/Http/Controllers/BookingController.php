@@ -46,7 +46,7 @@ class BookingController extends Controller
             "status" => BookingStatus::PENDING,
             "total_price" => $total_price
         ]);
-        $booking->load('apartment');
+        $booking->load('apartment.images');
         NotificationService::createNotification(
             $apartment->owner_id,
             'booking_created',
@@ -69,7 +69,7 @@ class BookingController extends Controller
             ], 403);
         }
         $booking->update(["status" => BookingStatus::CANCELLED]);
-        $booking->load('apartment');
+        $booking->load('apartment.images');
         NotificationService::createNotification(
             $booking->apartment->owner_id,
             'booking_cancelled',
@@ -89,13 +89,13 @@ class BookingController extends Controller
                 "message" => "you are not the owner of the given booking."
             ], 403);
         }
-        $booking->load('apartment');
+        $booking->load('apartment.images');
         return response()->json(["message" => "booking found successfully", "booking" => new BookingResource($booking)]);
     }
     public function listMyBookings(Request $request)
     {
         $user = $request->user();
-        $bookings = Booking::where("tenant_id", $user->id)->with('apartment')->get();
+        $bookings = Booking::where("tenant_id", $user->id)->with('apartment.images')->get();
 
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
@@ -234,7 +234,7 @@ class BookingController extends Controller
         if ($apartment->owner_id != $user->id) {
             return response()->json(["message" => "you are not the owner of this booking's apartment."], 403);
         }
-
+        $booking->load(["apartment.images"]);
         return response()->json(["message" => "booking found successfully.", "booking" => new BookingResource($booking)]);
     }
     public function ownerApproveBooking(Request $request, Booking $booking)
@@ -277,7 +277,7 @@ class BookingController extends Controller
             "Your booking for {$apartment->title} from {$booking->start_date} to {$booking->end_date} has been approved.",
             $booking->id
         );
-
+        $booking->load(["apartment.images"]);
         return response()->json(["message" => "booking approved successfully", "booking" => new BookingResource($booking)]);
     }
     public function ownerRejectBooking(Request $request, Booking $booking)
@@ -309,6 +309,7 @@ class BookingController extends Controller
             $booking->id
         );
 
+        $booking->load(["apartment.images"]);
         return response()->json(["message" => "booking rejected successfully", "booking" => new BookingResource($booking)]);
     }
     public function ownerListBookings(Request $request, Apartment $apartment)
@@ -318,7 +319,7 @@ class BookingController extends Controller
         if ($apartment->owner_id != $user->id) {
             return response()->json(["message" => "you are not the owner of the booking apartment."], 400);
         }
-        $bookings = Booking::where("apartment_id", $apartment->id)->get();
+        $bookings = Booking::where("apartment_id", $apartment->id)->with("apartment.images")->get();
 
         return response()->json(["message" => "success", "bookings" => BookingResource::collection($bookings)]);
     }
