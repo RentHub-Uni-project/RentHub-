@@ -103,7 +103,7 @@ class ApartmentController extends Controller
     public function myApartments(Request $request)
     {
         $user = $request->user();
-        $apartments = Apartment::where('owner_id', $user->id)->get();
+        $apartments = Apartment::where('owner_id', $user->id)->with('images')->get();
         return response()->json(["message" => "success", "apartments" => $apartments]);
     }
 
