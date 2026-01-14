@@ -53,7 +53,7 @@ Route::prefix("apartments")->middleware(['auth:sanctum'])->group(function () {
         Route::post('/create', [ApartmentController::class, 'store']);
         Route::patch('/update/{apartment}', [ApartmentController::class, 'update']);
         Route::delete('/delete/{apartment}', [ApartmentController::class, 'destroy']);
-        Route::get("/list-bookings/{apartment}", [BookingController::class, 'ownerListBookings']);
+        Route::get("/list-bookings/{apartment}", [BookingController::class, 'ownerListApartmentBookings']);
     });
 
     // Tenant APIs
@@ -90,6 +90,7 @@ Route::prefix("bookings")->middleware(["auth:sanctum"])->group(function () {
     });
 
     Route::prefix("owner")->middleware("role:owner")->group(function () {
+        Route::get('/list-my-bookings', [BookingController::class, 'ownerListBookings']);
         Route::put("/approve-booking/{booking}", [BookingController::class, "ownerApproveBooking"]);
         Route::put("/reject-booking/{booking}", [BookingController::class, "ownerRejectBooking"]);
         Route::get("/get-booking/{booking}", [BookingController::class, "ownerGetBooking"]);

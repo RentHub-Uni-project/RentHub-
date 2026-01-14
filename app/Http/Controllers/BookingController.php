@@ -312,7 +312,19 @@ class BookingController extends Controller
         $booking->load(["apartment.images"]);
         return response()->json(["message" => "booking rejected successfully", "booking" => new BookingResource($booking)]);
     }
-    public function ownerListBookings(Request $request, Apartment $apartment)
+    public function ownerListBookings(Request $request)
+    {
+        $user = $request->user();
+        $bookings = Booking::whereHas('apartment', function ($query) use ($user) {
+            $query->where('owner_id', $user->id);
+        })
+            ->with(['apartment', 'tenant'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return $bookings;
+    }
+    public function ownerListApartmentBookings(Request $request, Apartment $apartment)
     {
         $user = $request->user();
         // check owner

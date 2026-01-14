@@ -17,8 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
-            \App\Http\Middleware\EnsureJsonResponse::class,
             \App\Http\Middleware\CorsMiddleware::class,
+            \App\Http\Middleware\EnsureJsonResponse::class,
         ]);
 
         $middleware->alias([
