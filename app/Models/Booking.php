@@ -65,7 +65,7 @@ class Booking extends Model
 
     public static function calculateTotalPrice($start_date, $end_date, $price_per_night)
     {
-        $days = Carbon::parse($start_date)->diffInDays(Carbon::parse($end_date));
+        $days = Carbon::parse($start_date)->diffInDays(Carbon::parse($end_date)) + 1;
         $total_price = $days * $price_per_night;
 
         return $total_price;

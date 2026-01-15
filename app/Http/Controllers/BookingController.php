@@ -39,6 +39,13 @@ class BookingController extends Controller
 
         $total_price = Booking::calculateTotalPrice($data["start_date"], $data["end_date"], $apartment->price_per_night);
 
+        // check user wallet
+        $wallet = $user->wallet;
+        if ($wallet < $total_price) {
+            return response()->json(["message" => "you don't have enough money to create this booking"], 400);
+        }
+        $user->update(["wallet" => $wallet - $total_price]);
+
         $booking = Booking::create([
             ...$data,
             "apartment_id" => $apartment->id,
@@ -69,6 +76,10 @@ class BookingController extends Controller
             ], 403);
         }
         $booking->update(["status" => BookingStatus::CANCELLED]);
+        // return money to user
+        $wallet = $user->wallet;
+        $user->update(["wallet" => $wallet + $booking->total_price]);
+
         $booking->load('apartment.images');
         NotificationService::createNotification(
             $booking->apartment->owner_id,
@@ -261,13 +272,6 @@ class BookingController extends Controller
             return response()->json(["message" => $availability["message"]], 400);
         }
 
-        // handle user wallet
-        $wallet = $user->wallet;
-        if ($wallet < $booking->total_price) {
-            return response()->json(["message" => "you can't approve this booking, the user has no enough money."]);
-        }
-        $user->update(["wallet" => $wallet - $booking->total_price]);
-
         $booking->update(["status" => BookingStatus::APPROVED]);
 
         NotificationService::createNotification(
@@ -300,6 +304,9 @@ class BookingController extends Controller
         }
 
         $booking->update(["status" => BookingStatus::REJECTED]);
+        // return money to user
+        $tenant = $booking->tenant;
+        $tenant->update(["wallet" => $tenant->wallet + $booking->total_price]);
 
         NotificationService::createNotification(
             $booking->tenant_id,
